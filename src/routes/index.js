@@ -1,0 +1,21 @@
+import express from 'express';
+const router = express.Router();
+import authRoutes from './auth.route.js';
+import userRoutes from './user.route.js';
+import { appLogger } from '../core/app-logger.js';
+import { response, genResponseObj } from '../core/handler.js';
+
+// Health check route
+router.get('/health', (req, res) => {
+  appLogger.logInfo(req, 'API IS RUNNING');
+  const result = { status: 'API is running'};
+  return response(req, res, genResponseObj(req, '20000', result));
+});
+
+// Mount auth routes
+router.use('/auth', authRoutes);
+
+// Mount user routes
+router.use('/user', userRoutes);
+
+export default router;
