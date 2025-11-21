@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { appLogger } from './core/app-logger.js';
+import moment from 'moment';
 
 import 'dotenv/config';
 
@@ -17,7 +18,7 @@ app.use(express.urlencoded({ extended: true }));
 // Request logging middleware
 app.use((req, res, next) => {
   appLogger.logRequestReceived(req);
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  console.log(`${moment().toISOString()} - ${req.method} ${req.path}`);
   next();
 });
 

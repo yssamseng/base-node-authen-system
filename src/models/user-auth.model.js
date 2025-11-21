@@ -1,6 +1,7 @@
 import { DataTypes, Model } from 'sequelize';
 import bcrypt from 'bcryptjs';
 import { sequelize } from '../config/database.js';
+import moment from 'moment';
 
 class UserAuth extends Model {
   static associate(models) {
@@ -21,7 +22,7 @@ class UserAuth extends Model {
     if (!this.lockedUntil) {
       return false;
     }
-    return new Date() < new Date(this.lockedUntil);
+    return moment().isBefore(this.lockedUntil);
   }
 
   // Instance method to increment failed attempts
@@ -31,7 +32,7 @@ class UserAuth extends Model {
     // Lock account after 5 failed attempts for 30 minutes
     if (this.failedAttempts >= 5) {
       const lockDuration = 30 * 60 * 1000; // 30 minutes in milliseconds
-      this.lockedUntil = new Date(Date.now() + lockDuration);
+      this.lockedUntil = moment().add(lockDuration, 'milliseconds').toDate();
     }
 
     await this.save();
@@ -41,6 +42,30 @@ class UserAuth extends Model {
   async resetFailedAttempts() {
     this.failedAttempts = 0;
     this.lockedUntil = null;
+    await this.save();
+  }
+
+  // Instance method to check if email verification is expired
+  isEmailVerificationExpired() {
+    if (!this.emailVerificationExpiresAt) {
+      return true;
+    }
+    return moment().isAfter(this.emailVerificationExpiresAt);
+  }
+
+  // Instance method to check if password reset is expired
+  isPasswordResetExpired() {
+    if (!this.passwordResetExpiresAt) {
+      return true;
+    }
+    return moment().isAfter(this.passwordResetExpiresAt);
+  }
+
+  // Instance method to mark email as verified
+  async markEmailAsVerified() {
+    this.isVerified = true;
+    this.emailVerificationToken = null;
+    this.emailVerificationExpiresAt = null;
     await this.save();
   }
 
@@ -88,6 +113,24 @@ UserAuth.init({
     allowNull: false
   },
   lockedUntil: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  emailVerificationToken: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    unique: true
+  },
+  emailVerificationExpiresAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  passwordResetToken: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    unique: true
+  },
+  passwordResetExpiresAt: {
     type: DataTypes.DATE,
     allowNull: true
   }

@@ -4,6 +4,7 @@ import models from '../models/index.js';
 const { User, UserToken } = models;
 import { runWithTrace } from '../core/trace.js';
 import crypto from 'crypto';
+import moment from 'moment';
 
 const authenticate = async (req, res, next) => {
   try {
@@ -70,7 +71,7 @@ const authenticate = async (req, res, next) => {
     }
 
     // Update last used timestamp for the token
-    tokenRecord.lastUsedAt = new Date();
+    tokenRecord.lastUsedAt = moment().toDate();
     await tokenRecord.save();
 
     // Attach user and token info to request

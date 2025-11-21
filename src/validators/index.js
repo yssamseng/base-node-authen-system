@@ -25,4 +25,11 @@ const validateRequest = (schema) => {
   };
 };
 
-export { validateRequest };
+// Body validation middleware
+const validateBody = (schema) => validateRequest(schema, 'body');
+// Query validation middleware
+const validateQuery = (schema) => validateRequest(schema, 'query');
+// Params validation middleware
+const validateParams = (schema) => validateRequest(schema, 'params');
+
+export { validateBody, validateQuery, validateParams };

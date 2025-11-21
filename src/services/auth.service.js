@@ -1,8 +1,11 @@
 import { genErrorResponseObj } from '../core/handler.js';
 import { generateTokenPair, getTokenExpiration } from '../utils/jwt.util.js';
+import { generateEmailVerificationToken } from '../utils/token.util.js';
 import moment from 'moment';
 import models from '../models/index.js';
 import { findOne, create } from '../utils/db.util.js';
+import emailService from '../config/email.js';
+import emailVerificationConfig from '../config/email-verification.js';
 const { User, UserAuth, UserToken } = models;
 
 const register = async (req, transaction) => {
@@ -34,12 +37,23 @@ const register = async (req, transaction) => {
       transaction
     });
 
+    let emailVerification = null;
+
+    // Generate email verification token only if feature is enabled
+    if (emailVerificationConfig.isEnabled()) {
+      emailVerification = generateEmailVerificationToken();
+    }
+
     // Create user auth record
     await create(UserAuth, {
       data: {
         userId: user.id,
         password,
-        isVerified: false
+        isVerified: !emailVerificationConfig.isEnabled(), // Auto-verify if feature is disabled
+        ...(emailVerification && {
+          emailVerificationToken: emailVerification.token,
+          emailVerificationExpiresAt: emailVerification.expiresAt
+        })
       },
       transaction
     });
@@ -60,11 +74,31 @@ const register = async (req, transaction) => {
       transaction
     });
 
+    // Send verification email only if feature is enabled
+    if (emailVerification && emailVerificationConfig.isEnabled()) {
+      try {
+        await emailService.sendVerificationEmail(
+          email,
+          emailVerification.token,
+          `${firstName} ${lastName}`.trim() || username
+        );
+      } catch (emailError) {
+        console.error('Failed to send verification email:', emailError);
+        // Continue with registration even if email fails
+      }
+    }
+
     return {
       user: user.toJSON(),
       accessToken: tokenPair.accessToken,
       refreshToken: tokenPair.refreshToken,
-      expiresIn: moment(getTokenExpiration(tokenPair.accessToken)).diff(moment(), 'seconds')
+      expiresIn: moment(getTokenExpiration(tokenPair.accessToken)).diff(moment(), 'seconds'),
+      isVerified: !emailVerificationConfig.isEnabled(),
+      ...(emailVerificationConfig.isEnabled() && {
+        message: emailVerificationConfig.isEnabled()
+          ? 'Registration successful. Please check your email to verify your account.'
+          : 'Registration successful.'
+      })
     };
   } catch (error) {
     throw error;
@@ -102,6 +136,11 @@ const login = async (req) => {
   if (userAuth.isLocked()) {
     const lockedUntilFormatted = moment(userAuth.lockedUntil).format('YYYY-MM-DD HH:mm:ss');
     throw genErrorResponseObj(req, '40005', `Account is locked until ${lockedUntilFormatted}`);
+  }
+
+  // Check email verification if enabled and required
+  if (emailVerificationConfig.isLoginVerificationRequired() && !userAuth.isVerified) {
+    throw genErrorResponseObj(req, '40009', 'Please verify your email address before logging in');
   }
 
   // Verify password
@@ -233,7 +272,7 @@ const refreshToken = async (req) => {
     tokenRecord.refreshToken = newTokenPair.refreshToken;
     tokenRecord.accessTokenExpiresAt = getTokenExpiration(newTokenPair.accessToken);
     tokenRecord.refreshTokenExpiresAt = getTokenExpiration(newTokenPair.refreshToken);
-    tokenRecord.lastUsedAt = new Date();
+    tokenRecord.lastUsedAt = moment().toDate();
     await tokenRecord.save();
 
     return {

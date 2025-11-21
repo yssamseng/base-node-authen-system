@@ -1,5 +1,5 @@
 const { describe, test, expect, beforeEach, afterEach } = require('@jest/globals');
-const { generateToken, verifyToken } = require('../../../src/utils/jwt.util.js');
+const { generateAccessToken, verifyToken } = require('../../../src/utils/jwt.util.js');
 
 describe('JWT Utility Functions', () => {
   const testUserId = 123;
@@ -17,7 +17,7 @@ describe('JWT Utility Functions', () => {
 
   describe('generateToken', () => {
     test('should generate a valid JWT token', () => {
-      const token = generateToken(testUserId);
+      const token = generateAccessToken(testUserId);
 
       expect(token).toBeDefined();
       expect(typeof token).toBe('string');
@@ -25,14 +25,14 @@ describe('JWT Utility Functions', () => {
     });
 
     test('should generate different tokens for different users', () => {
-      const token1 = generateToken(1);
-      const token2 = generateToken(2);
+      const token1 = generateAccessToken(1);
+      const token2 = generateAccessToken(2);
 
       expect(token1).not.toBe(token2);
     });
 
     test('should include user ID in token payload', () => {
-      const token = generateToken(testUserId);
+      const token = generateAccessToken(testUserId);
       const decoded = verifyToken(token);
 
       expect(decoded.id).toBe(testUserId);
@@ -47,7 +47,7 @@ describe('JWT Utility Functions', () => {
 
   describe('verifyToken', () => {
     test('should verify a valid token and return payload', () => {
-      const token = generateToken(testUserId);
+      const token = generateAccessToken(testUserId);
       const decoded = verifyToken(token);
 
       expect(decoded).toBeDefined();
@@ -66,7 +66,7 @@ describe('JWT Utility Functions', () => {
     test('should return null for expired token', () => {
       // Create token with very short expiration
       process.env.JWT_EXPIRE = '1ms';
-      const token = generateToken(testUserId);
+      const token = generateAccessToken(testUserId);
 
       // Wait for token to expire
       setTimeout(() => {
@@ -76,7 +76,7 @@ describe('JWT Utility Functions', () => {
     });
 
     test('should return null for token signed with wrong secret', () => {
-      const token = generateToken(testUserId);
+      const token = generateAccessToken(testUserId);
 
       // Change the secret after token generation
       process.env.JWT_SECRET = 'different_secret';
@@ -106,7 +106,7 @@ describe('JWT Utility Functions', () => {
 
   describe('Token Integration', () => {
     test('should generate and verify token successfully', () => {
-      const token = generateToken(testUserId);
+      const token = generateAccessToken(testUserId);
       const decoded = verifyToken(token);
 
       expect(decoded.id).toBe(testUserId);
@@ -118,7 +118,7 @@ describe('JWT Utility Functions', () => {
       const userIds = [1, 2, 3, 999, 12345];
 
       userIds.forEach(userId => {
-        const token = generateToken(userId);
+        const token = generateAccessToken(userId);
         const decoded = verifyToken(token);
         expect(decoded.id).toBe(userId);
       });

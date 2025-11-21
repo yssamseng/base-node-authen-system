@@ -1,7 +1,8 @@
 import { describe, test, expect, jest, beforeEach, afterEach } from '@jest/globals';
 import * as authService from '../../../src/services/auth.service.js';
 import { genErrorResponseObj } from '../../../src/core/handler.js';
-import { generateToken } from '../../../src/utils/jwt.util.js';
+import { generateTokenPair, getTokenExpiration } from '../../../src/utils/jwt.util.js';
+import moment from 'moment';
 
 // Mock dependencies
 jest.mock('../../../src/core/handler.js');
@@ -35,8 +36,11 @@ describe('Auth Service', () => {
       finished: false
     };
 
-    // Mock generateToken
-    generateToken.mockReturnValue('mock_jwt_token');
+    // Mock generateTokenPair
+    generateTokenPair.mockReturnValue({ accessToken: 'mock_access_token', refreshToken: 'mock_refresh_token' });
+
+    // Mock getTokenExpiration
+    getTokenExpiration.mockReturnValue(moment().add(15, 'minutes').toDate());
 
     // Mock genErrorResponseObj
     genErrorResponseObj.mockImplementation((req, code, message) => {
@@ -160,7 +164,7 @@ describe('Auth Service', () => {
         isActive: true,
         toJSON: () => ({ id: 1, email: validLoginData.email, isActive: true }),
         auth: {
-          lastLogin: new Date(),
+          lastLogin: moment().toDate(),
           isVerified: false,
           isLocked: jest.fn().mockReturnValue(false),
           comparePassword: jest.fn().mockResolvedValue(true),
@@ -239,7 +243,7 @@ describe('Auth Service', () => {
         isActive: true,
         auth: {
           isLocked: jest.fn().mockReturnValue(true),
-          lockedUntil: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes from now
+          lockedUntil: moment().add(30, 'minutes').toDate() // 30 minutes from now
         }
       };
 
@@ -277,10 +281,10 @@ describe('Auth Service', () => {
       const mockUser = {
         id: 1,
         username: 'testuser',
-        createdAt: new Date('2023-11-01'),
+        createdAt: moment('2023-11-01').toDate(),
         toJSON: () => ({ id: 1, username: 'testuser' }),
         auth: {
-          lastLogin: new Date('2023-12-01 12:00:00'),
+          lastLogin: moment('2023-12-01 12:00:00').toDate(),
           isVerified: false,
           failedAttempts: 0
         }
@@ -319,7 +323,7 @@ describe('Auth Service', () => {
       const mockUser = {
         id: 1,
         username: 'testuser',
-        createdAt: new Date(),
+        createdAt: moment().toDate(),
         toJSON: () => ({ id: 1, username: 'testuser' }),
         auth: null
       };
@@ -345,7 +349,7 @@ describe('Auth Service', () => {
         username: 'testuser',
         firstName: 'Old',
         lastName: 'Name',
-        updatedAt: new Date('2023-12-01 12:00:00'),
+        updatedAt: moment('2023-12-01 12:00:00').toDate(),
         toJSON: () => ({ id: 1, username: 'testuser', firstName: 'Updated', lastName: 'Name' })
       };
 
@@ -382,7 +386,7 @@ describe('Auth Service', () => {
         id: 1,
         firstName: 'Old',
         lastName: 'Name',
-        updatedAt: new Date(),
+        updatedAt: moment().toDate(),
         toJSON: () => ({ id: 1, firstName: 'Updated', lastName: 'Name' })
       };
 

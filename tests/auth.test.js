@@ -1,5 +1,5 @@
 const { describe, test, expect, beforeEach, afterEach } = require('@jest/globals');
-const { generateToken, verifyToken } = require('../src/utils/jwt.util.js');
+const { generateAccessToken, verifyToken } = require('../src/utils/jwt.util.js');
 
 describe('JWT Authentication Tests', () => {
   const testUserId = 123;
@@ -19,7 +19,7 @@ describe('JWT Authentication Tests', () => {
 
   describe('Token Generation', () => {
     test('should generate a valid JWT token', () => {
-      const token = generateToken(testUserId);
+      const token = generateAccessToken(testUserId);
 
       expect(token).toBeDefined();
       expect(typeof token).toBe('string');
@@ -27,8 +27,8 @@ describe('JWT Authentication Tests', () => {
     });
 
     test('should generate different tokens for different users', () => {
-      const token1 = generateToken(1);
-      const token2 = generateToken(2);
+      const token1 = generateAccessToken(1);
+      const token2 = generateAccessToken(2);
 
       expect(token1).not.toBe(token2);
     });
@@ -36,7 +36,7 @@ describe('JWT Authentication Tests', () => {
 
   describe('Token Verification', () => {
     test('should verify a valid token and return payload', () => {
-      const token = generateToken(testUserId);
+      const token = generateAccessToken(testUserId);
       const decoded = verifyToken(token);
 
       expect(decoded).toBeDefined();
@@ -65,7 +65,7 @@ describe('JWT Authentication Tests', () => {
 
   describe('Token Integration', () => {
     test('should generate and verify token successfully', () => {
-      const token = generateToken(testUserId);
+      const token = generateAccessToken(testUserId);
       const decoded = verifyToken(token);
 
       expect(decoded.id).toBe(testUserId);
@@ -77,7 +77,7 @@ describe('JWT Authentication Tests', () => {
       const userIds = [1, 2, 3, 999, 12345];
 
       userIds.forEach(userId => {
-        const token = generateToken(userId);
+        const token = generateAccessToken(userId);
         const decoded = verifyToken(token);
         expect(decoded.id).toBe(userId);
       });
@@ -112,14 +112,14 @@ describe('JWT Authentication Tests', () => {
       const userIds = [1, 42, 999, 123456];
 
       userIds.forEach(userId => {
-        const token = generateToken(userId);
+        const token = generateAccessToken(userId);
         const decoded = verifyToken(token);
         expect(decoded.id).toBe(userId);
       });
     });
 
     test('should have proper timestamp fields', () => {
-      const token = generateToken(testUserId);
+      const token = generateAccessToken(testUserId);
       const decoded = verifyToken(token);
 
       expect(decoded).toHaveProperty('iat');
@@ -140,7 +140,7 @@ describe('Authentication Flow Examples', () => {
     const user = { id: 1, email: 'test@example.com' };
 
     // Simulate login - generate token
-    const token = generateToken(user.id);
+    const token = generateAccessToken(user.id);
     expect(token).toBeDefined();
 
     // Simulate protected route access - verify token

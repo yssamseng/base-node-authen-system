@@ -1,5 +1,5 @@
 import Joi from 'joi';
-import {validateRequest} from './index.js'
+import {validateBody} from './index.js'
 
 const registrationSchema = Joi.object({
   username: Joi.string()
@@ -79,10 +79,10 @@ const changePasswordSchema = Joi.object({
 });
 
 
-const validateRegistration = validateRequest(registrationSchema);
-const validateLogin = validateRequest(loginSchema);
-const validateRefreshToken = validateRequest(refreshTokenSchema);
-const validateChangePassword = validateRequest(changePasswordSchema);
+const validateRegistration = validateBody(registrationSchema);
+const validateLogin = validateBody(loginSchema);
+const validateRefreshToken = validateBody(refreshTokenSchema);
+const validateChangePassword = validateBody(changePasswordSchema);
 
 export {
   validateRegistration,

@@ -2,6 +2,7 @@ import express from 'express';
 const router = express.Router();
 import authRoutes from './auth.route.js';
 import userRoutes from './user.route.js';
+import emailVerificationRoutes from './email-verification.route.js';
 import { appLogger } from '../core/app-logger.js';
 import { response, genResponseObj } from '../core/handler.js';
 
@@ -14,6 +15,9 @@ router.get('/health', (req, res) => {
 
 // Mount auth routes
 router.use('/auth', authRoutes);
+
+// Mount email verification routes
+router.use('/email-verification', emailVerificationRoutes);
 
 // Mount user routes
 router.use('/user', userRoutes);

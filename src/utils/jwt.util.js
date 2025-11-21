@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import moment from 'moment';
 import 'dotenv/config';
 
 const generateAccessToken = (userId) => {
@@ -65,7 +66,7 @@ const verifyToken = (token) => {
 const getTokenExpiration = (token) => {
   try {
     const decoded = jwt.decode(token, { complete: true });
-    return new Date(decoded.payload.exp * 1000);
+    return moment(decoded.payload.exp * 1000).toDate();
   } catch (error) {
     return null;
   }

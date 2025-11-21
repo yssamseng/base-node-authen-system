@@ -1,5 +1,6 @@
 import { DataTypes, Model } from 'sequelize';
 import { sequelize } from '../config/database.js';
+import moment from 'moment';
 
 class UserToken extends Model {
   static associate(models) {
@@ -16,7 +17,7 @@ class UserToken extends Model {
     if (!this.refreshTokenExpiresAt) {
       return true;
     }
-    return new Date() > new Date(this.refreshTokenExpiresAt);
+    return moment().isAfter(this.refreshTokenExpiresAt);
   }
 
   // Instance method to check if access token is expired
@@ -24,7 +25,7 @@ class UserToken extends Model {
     if (!this.accessTokenExpiresAt) {
       return true;
     }
-    return new Date() > new Date(this.accessTokenExpiresAt);
+    return moment().isAfter(this.accessTokenExpiresAt);
   }
 
   // Instance method to check if token is active
@@ -172,14 +173,14 @@ UserToken.cleanupExpiredTokens = async () => {
         [sequelize.Sequelize.Op.or]: [
           {
             refreshTokenExpiresAt: {
-              [sequelize.Sequelize.Op.lt]: new Date()
+              [sequelize.Sequelize.Op.lt]: moment().toDate()
             }
           },
           {
             isActive: false,
             updatedAt: {
               // Remove inactive tokens after 7 days
-              [sequelize.Sequelize.Op.lt]: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+              [sequelize.Sequelize.Op.lt]: moment().subtract(7, 'days').toDate()
             }
           }
         ]

@@ -1,13 +1,18 @@
 import { describe, test, expect, jest, beforeEach, afterEach } from '@jest/globals';
 import { authenticate } from '../../../src/middleware/auth.middleware.js';
-import { verifyToken } from '../../../src/utils/jwt.util.js';
+import { verifyAccessToken } from '../../../src/utils/jwt.util.js';
 
 // Mock dependencies
 jest.mock('../../../src/utils/jwt.util.js');
 jest.mock('../../../src/models/index.js');
+jest.mock('../../../src/core/handler.js');
+jest.mock('../../../src/core/trace.js');
 
 import models from '../../../src/models/index.js';
-const { User } = models;
+import { responseError, genErrorResponseObj } from '../../../src/core/handler.js';
+import { runWithTrace } from '../../../src/core/trace.js';
+
+const { User, UserToken } = models;
 
 describe('Auth Middleware', () => {
   let mockReq, mockRes, mockNext;
@@ -34,6 +39,14 @@ describe('Auth Middleware', () => {
 
     // Mock User model
     User.findByPk = jest.fn();
+    UserToken.findOne = jest.fn();
+
+    // Mock response functions
+    responseError.mockReturnValue(mockRes);
+    genErrorResponseObj.mockReturnValue({
+      resCode: 'TEST_CODE',
+      message: 'Test error message'
+    });
   });
 
   afterEach(() => {
@@ -43,23 +56,41 @@ describe('Auth Middleware', () => {
   describe('Token Extraction', () => {
     test('should extract token from Authorization header with Bearer prefix', async () => {
       const token = 'valid_jwt_token';
+      const mockUser = { id: 1, isActive: true };
+      const mockTokenRecord = { save: jest.fn().mockResolvedValue() };
+
       mockReq.header.mockReturnValue(`Bearer ${token}`);
 
-      // Mock successful token verification and user finding
-      verifyToken.mockReturnValue({ id: 1 });
-      User.findByPk.mockResolvedValue({ id: 1, isActive: true });
+      // Mock successful token verification
+      verifyAccessToken.mockReturnValue({
+        valid: true,
+        decoded: { id: 1 }
+      });
+
+      UserToken.findOne.mockResolvedValue(mockTokenRecord);
+      User.findByPk.mockResolvedValue(mockUser);
 
       await authenticate(mockReq, mockRes, mockNext);
 
       expect(mockReq.header).toHaveBeenCalledWith('Authorization');
+      expect(verifyAccessToken).toHaveBeenCalledWith(token);
+      expect(UserToken.findOne).toHaveBeenCalledWith({
+        where: {
+          accessToken: token,
+          isActive: true,
+          userId: 1
+        }
+      });
+      expect(mockNext).toHaveBeenCalled();
     });
 
-    test('should handle missing Authorization header', async () => {
+    test('should handle missing Authorization header with error code 40006', async () => {
       mockReq.header.mockReturnValue(undefined);
 
       await authenticate(mockReq, mockRes, mockNext);
 
-      expect(mockRes.status).toHaveBeenCalledWith(401);
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40006', 'No authentication token, access denied');
+      expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(mockNext).not.toHaveBeenCalled();
     });
 
@@ -68,7 +99,7 @@ describe('Auth Middleware', () => {
 
       await authenticate(mockReq, mockRes, mockNext);
 
-      expect(mockRes.status).toHaveBeenCalledWith(401);
+      expect(verifyAccessToken).toHaveBeenCalledWith('InvalidToken');
       expect(mockNext).not.toHaveBeenCalled();
     });
   });
@@ -77,41 +108,70 @@ describe('Auth Middleware', () => {
     test('should proceed with valid token', async () => {
       const token = 'valid_token';
       const mockUser = { id: 1, isActive: true };
+      const mockTokenRecord = { save: jest.fn().mockResolvedValue() };
 
       mockReq.header.mockReturnValue(`Bearer ${token}`);
-      verifyToken.mockReturnValue({ id: 1 });
+      verifyAccessToken.mockReturnValue({
+        valid: true,
+        decoded: { id: 1 }
+      });
+      UserToken.findOne.mockResolvedValue(mockTokenRecord);
       User.findByPk.mockResolvedValue(mockUser);
 
       await authenticate(mockReq, mockRes, mockNext);
 
-      expect(verifyToken).toHaveBeenCalledWith(token);
+      expect(verifyAccessToken).toHaveBeenCalledWith(token);
       expect(mockNext).toHaveBeenCalled();
       expect(mockReq.user).toBe(mockUser);
+      expect(mockReq.token).toBe(mockTokenRecord);
     });
 
-    test('should reject invalid token', async () => {
-      const token = 'invalid_token';
+    test('should reject expired token with error code 40103', async () => {
+      const token = 'expired_token';
 
       mockReq.header.mockReturnValue(`Bearer ${token}`);
-      verifyToken.mockReturnValue(null);
-
-      await authenticate(mockReq, mockRes, mockNext);
-
-      expect(mockRes.status).toHaveBeenCalledWith(401);
-      expect(mockNext).not.toHaveBeenCalled();
-    });
-
-    test('should handle token verification errors', async () => {
-      const token = 'malformed_token';
-
-      mockReq.header.mockReturnValue(`Bearer ${token}`);
-      verifyToken.mockImplementation(() => {
-        throw new Error('Token verification failed');
+      verifyAccessToken.mockReturnValue({
+        valid: false,
+        error: 'TokenExpiredError'
       });
 
       await authenticate(mockReq, mockRes, mockNext);
 
-      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40103', 'Token has expired');
+      expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    test('should reject invalid JWT token with error code 40007', async () => {
+      const token = 'invalid_token';
+
+      mockReq.header.mockReturnValue(`Bearer ${token}`);
+      verifyAccessToken.mockReturnValue({
+        valid: false,
+        error: 'JsonWebTokenError'
+      });
+
+      await authenticate(mockReq, mockRes, mockNext);
+
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40007', 'Token is not valid');
+      expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    test('should reject token that is not in database', async () => {
+      const token = 'valid_but_not_in_db_token';
+
+      mockReq.header.mockReturnValue(`Bearer ${token}`);
+      verifyAccessToken.mockReturnValue({
+        valid: true,
+        decoded: { id: 1 }
+      });
+      UserToken.findOne.mockResolvedValue(null);
+
+      await authenticate(mockReq, mockRes, mockNext);
+
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40007', 'Token is not valid or has been revoked');
+      expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(mockNext).not.toHaveBeenCalled();
     });
   });
@@ -119,10 +179,15 @@ describe('Auth Middleware', () => {
   describe('User Validation', () => {
     test('should proceed with existing active user', async () => {
       const token = 'valid_token';
-      const mockUser = { id: 1, username: 'testuser', isActive: true };
+      const mockUser = { id: 1, isActive: true };
+      const mockTokenRecord = { save: jest.fn().mockResolvedValue() };
 
       mockReq.header.mockReturnValue(`Bearer ${token}`);
-      verifyToken.mockReturnValue({ id: 1 });
+      verifyAccessToken.mockReturnValue({
+        valid: true,
+        decoded: { id: 1 }
+      });
+      UserToken.findOne.mockResolvedValue(mockTokenRecord);
       User.findByPk.mockResolvedValue(mockUser);
 
       await authenticate(mockReq, mockRes, mockNext);
@@ -132,155 +197,176 @@ describe('Auth Middleware', () => {
       expect(mockNext).toHaveBeenCalled();
     });
 
-    test('should reject non-existent user', async () => {
+    test('should reject non-existent user with error code 40403', async () => {
       const token = 'valid_token';
+      const mockTokenRecord = { save: jest.fn().mockResolvedValue() };
 
       mockReq.header.mockReturnValue(`Bearer ${token}`);
-      verifyToken.mockReturnValue({ id: 1 });
+      verifyAccessToken.mockReturnValue({
+        valid: true,
+        decoded: { id: 1 }
+      });
+      UserToken.findOne.mockResolvedValue(mockTokenRecord);
       User.findByPk.mockResolvedValue(null);
 
       await authenticate(mockReq, mockRes, mockNext);
 
-      expect(mockRes.status).toHaveBeenCalledWith(401);
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40403', 'User not found');
+      expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(mockNext).not.toHaveBeenCalled();
     });
 
-    test('should reject inactive user', async () => {
+    test('should reject inactive user with error code 40004', async () => {
       const token = 'valid_token';
-      const mockUser = { id: 1, username: 'testuser', isActive: false };
+      const mockUser = { id: 1, isActive: false };
+      const mockTokenRecord = { save: jest.fn().mockResolvedValue() };
 
       mockReq.header.mockReturnValue(`Bearer ${token}`);
-      verifyToken.mockReturnValue({ id: 1 });
+      verifyAccessToken.mockReturnValue({
+        valid: true,
+        decoded: { id: 1 }
+      });
+      UserToken.findOne.mockResolvedValue(mockTokenRecord);
       User.findByPk.mockResolvedValue(mockUser);
 
       await authenticate(mockReq, mockRes, mockNext);
 
-      expect(mockRes.status).toHaveBeenCalledWith(401);
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40004', 'User account is inactive');
+      expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(mockNext).not.toHaveBeenCalled();
     });
+  });
 
-    test('should handle database errors when finding user', async () => {
+  describe('Token Management', () => {
+    test('should update token last used timestamp', async () => {
       const token = 'valid_token';
+      const mockUser = { id: 1, isActive: true };
+      const mockTokenRecord = {
+        save: jest.fn().mockResolvedValue(),
+        revoke: jest.fn().mockResolvedValue(),
+        isAccessTokenExpired: jest.fn().mockReturnValue(false)
+      };
 
       mockReq.header.mockReturnValue(`Bearer ${token}`);
-      verifyToken.mockReturnValue({ id: 1 });
-      User.findByPk.mockRejectedValue(new Error('Database connection failed'));
+      verifyAccessToken.mockReturnValue({
+        valid: true,
+        decoded: { id: 1 }
+      });
+      UserToken.findOne.mockResolvedValue(mockTokenRecord);
+      User.findByPk.mockResolvedValue(mockUser);
 
       await authenticate(mockReq, mockRes, mockNext);
 
-      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockTokenRecord.lastUsedAt).toBeDefined();
+      expect(mockTokenRecord.save).toHaveBeenCalled();
+      expect(mockReq.token).toBe(mockTokenRecord);
+    });
+
+    test('should handle expired access token in database', async () => {
+      const token = 'expired_but_valid_jwt_token';
+      const mockTokenRecord = {
+        revoke: jest.fn().mockResolvedValue(),
+        isAccessTokenExpired: jest.fn().mockReturnValue(true)
+      };
+
+      mockReq.header.mockReturnValue(`Bearer ${token}`);
+      verifyAccessToken.mockReturnValue({
+        valid: true,
+        decoded: { id: 1 }
+      });
+      UserToken.findOne.mockResolvedValue(mockTokenRecord);
+
+      await authenticate(mockReq, mockRes, mockNext);
+
+      expect(mockTokenRecord.revoke).toHaveBeenCalled();
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40103', 'Access token has expired');
+      expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(mockNext).not.toHaveBeenCalled();
     });
   });
 
   describe('Error Handling', () => {
-    test('should handle unexpected errors gracefully', async () => {
+    test('should handle database errors during token lookup', async () => {
       const token = 'valid_token';
 
       mockReq.header.mockReturnValue(`Bearer ${token}`);
-      verifyToken.mockImplementation(() => {
-        throw new Error('Unexpected error');
+      verifyAccessToken.mockReturnValue({
+        valid: true,
+        decoded: { id: 1 }
       });
+      UserToken.findOne.mockRejectedValue(new Error('Database error'));
 
       await authenticate(mockReq, mockRes, mockNext);
 
-      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '50000', 'Server error during authentication');
+      expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(mockNext).not.toHaveBeenCalled();
-      expect(console.error).toHaveBeenCalled();
     });
 
-    test('should use proper error response format', async () => {
-      mockReq.header.mockReturnValue(undefined);
+    test('should handle errors during user lookup', async () => {
+      const token = 'valid_token';
+      const mockTokenRecord = { save: jest.fn().mockResolvedValue() };
+
+      mockReq.header.mockReturnValue(`Bearer ${token}`);
+      verifyAccessToken.mockReturnValue({
+        valid: true,
+        decoded: { id: 1 }
+      });
+      UserToken.findOne.mockResolvedValue(mockTokenRecord);
+      User.findByPk.mockRejectedValue(new Error('Database error'));
 
       await authenticate(mockReq, mockRes, mockNext);
 
-      expect(mockRes.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          status: false,
-          transactionId: expect.any(String),
-          resCode: expect.any(String),
-          error: expect.objectContaining({
-            developerMessage: expect.any(String),
-            userMessage: expect.any(String)
-          })
-        })
-      );
-    });
-  });
-
-  describe('Response Format', () => {
-    test('should return structured error response for missing token', async () => {
-      mockReq.header.mockReturnValue(undefined);
-
-      await authenticate(mockReq, mockRes, mockNext);
-
-      expect(mockRes.status).toHaveBeenCalledWith(401);
-      expect(mockRes.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          status: false,
-          resCode: '40006',
-          error: expect.objectContaining({
-            developerMessage: 'No authentication token, access denied'
-          })
-        })
-      );
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '50000', 'Server error during authentication');
+      expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
+      expect(mockNext).not.toHaveBeenCalled();
     });
 
-    test('should return structured error response for invalid token', async () => {
-      mockReq.header.mockReturnValue('Bearer invalid_token');
-      verifyToken.mockReturnValue(null);
+    test('should handle errors during token save', async () => {
+      const token = 'valid_token';
+      const mockUser = { id: 1, isActive: true };
+      const mockTokenRecord = {
+        save: jest.fn().mockRejectedValue(new Error('Save error')),
+        isAccessTokenExpired: jest.fn().mockReturnValue(false)
+      };
 
-      await authenticate(mockReq, mockRes, mockNext);
-
-      expect(mockRes.status).toHaveBeenCalledWith(401);
-      expect(mockRes.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          status: false,
-          resCode: '40007',
-          error: expect.objectContaining({
-            developerMessage: 'Token is not valid'
-          })
-        })
-      );
-    });
-
-    test('should return structured error response for user not found', async () => {
-      mockReq.header.mockReturnValue('Bearer valid_token');
-      verifyToken.mockReturnValue({ id: 1 });
-      User.findByPk.mockResolvedValue(null);
-
-      await authenticate(mockReq, mockRes, mockNext);
-
-      expect(mockRes.status).toHaveBeenCalledWith(401);
-      expect(mockRes.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          status: false,
-          resCode: '40403',
-          error: expect.objectContaining({
-            developerMessage: 'User not found'
-          })
-        })
-      );
-    });
-
-    test('should return structured error response for inactive user', async () => {
-      const mockUser = { id: 1, isActive: false };
-
-      mockReq.header.mockReturnValue('Bearer valid_token');
-      verifyToken.mockReturnValue({ id: 1 });
+      mockReq.header.mockReturnValue(`Bearer ${token}`);
+      verifyAccessToken.mockReturnValue({
+        valid: true,
+        decoded: { id: 1 }
+      });
+      UserToken.findOne.mockResolvedValue(mockTokenRecord);
       User.findByPk.mockResolvedValue(mockUser);
 
       await authenticate(mockReq, mockRes, mockNext);
 
-      expect(mockRes.status).toHaveBeenCalledWith(401);
-      expect(mockRes.json).toHaveBeenCalledWith(
+      // Should not throw error if save fails, middleware should continue
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '50000', 'Server error during authentication');
+    });
+  });
+
+  describe('Request Tracing', () => {
+    test('should call runWithTrace with user context', async () => {
+      const token = 'valid_token';
+      const mockUser = { id: 1, isActive: true };
+      const mockTokenRecord = { save: jest.fn().mockResolvedValue() };
+
+      mockReq.header.mockReturnValue(`Bearer ${token}`);
+      verifyAccessToken.mockReturnValue({
+        valid: true,
+        decoded: { id: 1 }
+      });
+      UserToken.findOne.mockResolvedValue(mockTokenRecord);
+      User.findByPk.mockResolvedValue(mockUser);
+
+      await authenticate(mockReq, mockRes, mockNext);
+
+      expect(runWithTrace).toHaveBeenCalledWith(
         expect.objectContaining({
-          status: false,
-          resCode: '40004',
-          error: expect.objectContaining({
-            developerMessage: 'User account is inactive'
-          })
-        })
+          correlation_id: expect.any(String),
+          user_id: 1
+        }),
+        expect.any(Function)
       );
     });
   });
