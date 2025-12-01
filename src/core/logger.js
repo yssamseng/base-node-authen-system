@@ -10,9 +10,6 @@ const logtail = new Logtail('SUH8P8D99C5TveJnEbwacZhF', {
   endpoint: 'https://s1564615.eu-nbg-2.betterstackdata.com',
 });
 
-// -----------------------------------------------------------------------------
-// 1. ดึงค่า Service Context (เหมือนเดิม)
-// -----------------------------------------------------------------------------
 const serviceName = process.env.SERVICE_NAME || 'my-api-service';
 const serviceVersion = process.env.SERVICE_VERSION || '1.0.0';
 const environment = process.env.NODE_ENV || 'development';
@@ -43,9 +40,6 @@ if (environment !== 'production') {
   );
 }
 
-// -----------------------------------------------------------------------------
-// 4. สร้าง Logger
-// -----------------------------------------------------------------------------
 const logger = winston.createLogger({
   level: environment === 'production' ? LOG_CONSTANT.LEVEL.INFO : LOG_CONSTANT.LEVEL.DEBUG,
   format: winston.format.combine(
@@ -61,19 +55,19 @@ const logger = winston.createLogger({
   },
   transports: [
     ...transports,
-    // // Error log file
-    // new winston.transports.File({
-    //   filename: 'logs/error.log',
-    //   level: 'error',
-    //   maxsize: 5242880, // 5MB
-    //   maxFiles: 5,
-    // }),
-    // // Combined log file
-    // new winston.transports.File({
-    //   filename: 'logs/combined.log',
-    //   maxsize: 5242880, // 5MB
-    //   maxFiles: 5,
-    // }),
+    // Error log file
+    new winston.transports.File({
+      filename: 'logs/error.log',
+      level: 'error',
+      maxsize: 5242880, // 5MB
+      maxFiles: 5,
+    }),
+    // Combined log file
+    new winston.transports.File({
+      filename: 'logs/combined.log',
+      maxsize: 5242880, // 5MB
+      maxFiles: 5,
+    }),
   ],
   exitOnError: false,
 });
