@@ -3,7 +3,7 @@ const router = express.Router();
 import authRoutes from './auth.route.js';
 import userRoutes from './user.route.js';
 import emailVerificationRoutes from './email-verification.route.js';
-import { appLogger } from '../core/app-logger.js';
+import { appLogger } from '../utils/app-logger.util.js';
 import { response, genResponseObj } from '../core/handler.js';
 
 // Health check route

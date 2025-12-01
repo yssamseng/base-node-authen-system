@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { appLogger } from './core/app-logger.js';
+import { appLogger } from './utils/app-logger.util.js';
 import moment from 'moment';
 
 import 'dotenv/config';

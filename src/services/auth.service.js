@@ -4,8 +4,8 @@ import { generateEmailVerificationToken } from '../utils/token.util.js';
 import moment from 'moment';
 import models from '../models/index.js';
 import { findOne, create } from '../utils/db.util.js';
-import emailService from '../config/email.js';
-import emailVerificationConfig from '../config/email-verification.js';
+import EmailSendingService from './email-sending.service.js';
+import emailVerifyConfig from '../utils/email-verify-config.util.js';
 const { User, UserAuth, UserToken } = models;
 
 const register = async (req, transaction) => {
@@ -40,7 +40,7 @@ const register = async (req, transaction) => {
     let emailVerification = null;
 
     // Generate email verification token only if feature is enabled
-    if (emailVerificationConfig.isEnabled()) {
+    if (emailVerifyConfig.isEnabled()) {
       emailVerification = generateEmailVerificationToken();
     }
 
@@ -49,7 +49,7 @@ const register = async (req, transaction) => {
       data: {
         userId: user.id,
         password,
-        isVerified: !emailVerificationConfig.isEnabled(), // Auto-verify if feature is disabled
+        isVerified: !emailVerifyConfig.isEnabled(), // Auto-verify if feature is disabled
         ...(emailVerification && {
           emailVerificationToken: emailVerification.token,
           emailVerificationExpiresAt: emailVerification.expiresAt
@@ -75,9 +75,9 @@ const register = async (req, transaction) => {
     });
 
     // Send verification email only if feature is enabled
-    if (emailVerification && emailVerificationConfig.isEnabled()) {
+    if (emailVerification && emailVerifyConfig.isEnabled()) {
       try {
-        await emailService.sendVerificationEmail(
+        await EmailSendingService.sendVerificationEmail(
           email,
           emailVerification.token,
           `${firstName} ${lastName}`.trim() || username
@@ -93,9 +93,9 @@ const register = async (req, transaction) => {
       accessToken: tokenPair.accessToken,
       refreshToken: tokenPair.refreshToken,
       expiresIn: moment(getTokenExpiration(tokenPair.accessToken)).diff(moment(), 'seconds'),
-      isVerified: !emailVerificationConfig.isEnabled(),
-      ...(emailVerificationConfig.isEnabled() && {
-        message: emailVerificationConfig.isEnabled()
+      isVerified: !emailVerifyConfig.isEnabled(),
+      ...(emailVerifyConfig.isEnabled() && {
+        message: emailVerifyConfig.isEnabled()
           ? 'Registration successful. Please check your email to verify your account.'
           : 'Registration successful.'
       })
@@ -139,7 +139,7 @@ const login = async (req) => {
   }
 
   // Check email verification if enabled and required
-  if (emailVerificationConfig.isLoginVerificationRequired() && !userAuth.isVerified) {
+  if (emailVerifyConfig.isLoginVerificationRequired() && !userAuth.isVerified) {
     throw genErrorResponseObj(req, '40009', 'Please verify your email address before logging in');
   }
 

@@ -3,7 +3,7 @@
  * Provides essential CRUD operations with logging
  */
 
-import { appLogger } from '../core/app-logger.js';
+import { appLogger } from './app-logger.util.js';
 
 /**
  * Helper method to log database operations using the app logger

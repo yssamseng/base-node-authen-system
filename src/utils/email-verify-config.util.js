@@ -1,5 +1,5 @@
 // Email verification configuration
-const emailVerificationConfig = {
+const emailVerifyConfig = {
   // Enable/disable email verification feature
   enabled: process.env.EMAIL_VERIFICATION_ENABLED === 'true',
 
@@ -80,4 +80,4 @@ const emailVerificationConfig = {
   }
 };
 
-export default emailVerificationConfig;
+export default emailVerifyConfig;

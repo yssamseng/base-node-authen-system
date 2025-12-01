@@ -4,8 +4,8 @@ import { generatePasswordResetToken } from '../utils/token.util.js';
 import moment from 'moment';
 import models from '../models/index.js';
 import { findOne } from '../utils/db.util.js';
-import emailService from '../config/email.js';
-import emailVerificationConfig from '../config/email-verification.js';
+import EmailSendingService from './email-sending.service.js';
+import emailVerifyConfig from '../utils/email-verify-config.util.js';
 
 const { User, UserAuth } = models;
 
@@ -43,13 +43,13 @@ const resendVerificationEmail = async (req) => {
   // Check if there's a recent verification email sent (cooldown)
   if (userAuth.emailVerificationExpiresAt) {
     const timeSinceLastSent = moment().diff(
-      moment(userAuth.emailVerificationExpiresAt).subtract(emailVerificationConfig.getTokenExpirationHours(), 'hours'),
+      moment(userAuth.emailVerificationExpiresAt).subtract(emailVerifyConfig.getTokenExpirationHours(), 'hours'),
       'milliseconds'
     );
 
-    if (timeSinceLastSent < emailVerificationConfig.getResendCooldownMs()) {
+    if (timeSinceLastSent < emailVerifyConfig.getResendCooldownMs()) {
       const remainingCooldown = Math.ceil(
-        (emailVerificationConfig.getResendCooldownMs() - timeSinceLastSent) / (60 * 1000)
+        (emailVerifyConfig.getResendCooldownMs() - timeSinceLastSent) / (60 * 1000)
       );
       throw genErrorResponseObj(req, '40011', `Please wait ${remainingCooldown} minutes before requesting another verification email`);
     }
@@ -65,7 +65,7 @@ const resendVerificationEmail = async (req) => {
 
   // Send verification email
   try {
-    await emailService.sendVerificationEmail(
+    await EmailSendingService.sendVerificationEmail(
       email,
       emailVerification.token,
       `${user.firstName} ${user.lastName}`.trim() || user.username
@@ -168,7 +168,7 @@ const requestPasswordReset = async (req) => {
 
   // Send password reset email
   try {
-    await emailService.sendPasswordResetEmail(
+    await EmailSendingService.sendPasswordResetEmail(
       email,
       passwordReset.token,
       `${user.firstName} ${user.lastName}`.trim() || user.username
@@ -250,8 +250,8 @@ const checkVerificationStatus = async (req) => {
   return {
     email: userAuth.user.email,
     isVerified: userAuth.isVerified,
-    emailVerificationEnabled: emailVerificationConfig.isEnabled(),
-    loginVerificationRequired: emailVerificationConfig.isLoginVerificationRequired(),
+    emailVerificationEnabled: emailVerifyConfig.isEnabled(),
+    loginVerificationRequired: emailVerifyConfig.isLoginVerificationRequired(),
     ...(userAuth.emailVerificationExpiresAt && !userAuth.isVerified && {
       verificationExpiresAt: moment(userAuth.emailVerificationExpiresAt).format('YYYY-MM-DD HH:mm:ss')
     })
