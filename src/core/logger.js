@@ -4,15 +4,20 @@ import { Logtail } from '@logtail/node';
 import { LogtailTransport } from '@logtail/winston';
 
 import { LOG_CONSTANT } from '../config/constants.js';
+import APP_CONFIG from '../config/app-config.js';
 
-// Create a Logtail client
-const logtail = new Logtail('SUH8P8D99C5TveJnEbwacZhF', {
-  endpoint: 'https://s1564615.eu-nbg-2.betterstackdata.com',
-});
+// Create Logtail client only if credentials are provided
+let logtail = null;
+const { sourceToken: logtailToken, endpoint: logtailEndpoint } = APP_CONFIG.logtail;
 
-const serviceName = process.env.SERVICE_NAME || 'my-api-service';
-const serviceVersion = process.env.SERVICE_VERSION || '1.0.0';
-const environment = process.env.NODE_ENV || 'development';
+if (logtailToken && logtailToken.trim() !== '' && logtailEndpoint && logtailEndpoint.trim() !== '') {
+  logtail = new Logtail(logtailToken, {
+    endpoint: logtailEndpoint,
+  });
+}
+
+const { name: serviceName, version: serviceVersion } = APP_CONFIG.service;
+const environment = APP_CONFIG.server.env;
 
 // consoleFormat สำหรับ Development
 const consoleFormat = winston.format.combine(
@@ -28,9 +33,11 @@ const consoleFormat = winston.format.combine(
   })
 );
 
-const transports = [
-  new LogtailTransport(logtail),
-];
+const transports = [];
+
+if (logtail) {
+  transports.push(new LogtailTransport(logtail));
+}
 
 if (environment !== 'production') {
   transports.push(

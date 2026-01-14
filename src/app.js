@@ -2,28 +2,34 @@ import express from 'express';
 import cors from 'cors';
 import { appLogger } from './utils/app-logger.util.js';
 import moment from 'moment';
-
-import 'dotenv/config';
+import APP_CONFIG from './config/app-config.js';
 
 const app = express();
 
 // Middleware
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: APP_CONFIG.cors.origin,
   credentials: true
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Timing middleware
+app.use((req, res, next) => {
+  const startTime = process.hrtime.bigint();
+  req.startTime = startTime;
+  next();
+});
+
 // Request logging middleware
 app.use((req, res, next) => {
-  appLogger.logRequestReceived(req);
   console.log(`${moment().toISOString()} - ${req.method} ${req.path}`);
+  appLogger.logRequestReceived(req);
   next();
 });
 
 // Routes
-import routes from './routes/index.js';
+import routes from './routes/routes.js';
 app.use('/api', routes);
 
 // 404 handler

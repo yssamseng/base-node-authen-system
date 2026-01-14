@@ -1,6 +1,6 @@
 import { verifyAccessToken } from '../utils/jwt.util.js';
 import { responseError, genErrorResponseObj } from '../core/handler.js';
-import models from '../models/index.js';
+import models from '../models/model.js';
 const { User, UserToken } = models;
 import { runWithTrace } from '../utils/trace.util.js';
 import crypto from 'crypto';

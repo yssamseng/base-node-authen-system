@@ -1,20 +1,22 @@
 import jwt from 'jsonwebtoken';
 import moment from 'moment';
-import 'dotenv/config';
+import APP_CONFIG from '../config/app-config.js';
+
+const { secret, accessExpire, refreshSecret, refreshExpire } = APP_CONFIG.jwt;
 
 const generateAccessToken = (userId) => {
   return jwt.sign(
     { id: userId, type: 'access' },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_ACCESS_EXPIRE || '15m' }
+    secret,
+    { expiresIn: accessExpire }
   );
 };
 
 const generateRefreshToken = (userId) => {
   return jwt.sign(
     { id: userId, type: 'refresh' },
-    process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_REFRESH_EXPIRE || '7d' }
+    refreshSecret,
+    { expiresIn: refreshExpire }
   );
 };
 
@@ -27,7 +29,7 @@ const generateTokenPair = (userId) => {
 
 const verifyAccessToken = (token) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, secret);
     // Ensure this is an access token
     if (decoded.type !== 'access') {
       return { valid: false, error: 'Invalid token type' };
@@ -40,10 +42,7 @@ const verifyAccessToken = (token) => {
 
 const verifyRefreshToken = (token) => {
   try {
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET
-    );
+    const decoded = jwt.verify(token, refreshSecret);
     // Ensure this is a refresh token
     if (decoded.type !== 'refresh') {
       return { valid: false, error: 'Invalid token type' };
@@ -56,7 +55,7 @@ const verifyRefreshToken = (token) => {
 
 const verifyToken = (token) => {
   try {
-    return jwt.verify(token, process.env.JWT_SECRET);
+    return jwt.verify(token, secret);
   } catch (error) {
     return null;
   }

@@ -7,7 +7,7 @@ import {
   requestPasswordResetSchema,
   resetPasswordSchema
 } from '../validators/email-verification.validator.js';
-import { validateBody } from '../validators/index.js';
+import { validateBody } from '../validators/validator.js';
 
 const router = Router();
 

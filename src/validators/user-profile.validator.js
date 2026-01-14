@@ -1,5 +1,5 @@
 import Joi from 'joi';
-import { validateBody } from './index.js'
+import { validateBody } from './validator.js'
 
 const updateProfileSchema = Joi.object({
   firstName: Joi.string()

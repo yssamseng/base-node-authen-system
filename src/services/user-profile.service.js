@@ -1,6 +1,6 @@
 import { genErrorResponseObj } from '../core/handler.js';
 import moment from 'moment';
-import models from '../models/index.js';
+import models from '../models/model.js';
 import { findOne, update } from '../utils/db.util.js';
 const { User, UserAuth } = models;
 

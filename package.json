@@ -13,11 +13,20 @@
     "db:seed": "sequelize-cli db:seed:all"
   },
   "keywords": [
+    "nodejs",
     "express",
+    "rest-api",
     "authentication",
+    "auth",
+    "jwt",
     "sequelize",
+    "postgresql",
     "mysql",
-    "jwt"
+    "api",
+    "backend",
+    "security",
+    "nodemailer",
+    "validation"
   ],
   "author": "",
   "license": "ISC",

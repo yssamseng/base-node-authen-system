@@ -2,7 +2,7 @@ import { genErrorResponseObj } from '../core/handler.js';
 import { generateTokenPair, getTokenExpiration } from '../utils/jwt.util.js';
 import { generateEmailVerificationToken } from '../utils/token.util.js';
 import moment from 'moment';
-import models from '../models/index.js';
+import models from '../models/model.js';
 import { findOne, create } from '../utils/db.util.js';
 import EmailSendingService from './email-sending.service.js';
 import emailVerifyConfig from '../utils/email-verify-config.util.js';

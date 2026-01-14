@@ -13,25 +13,22 @@ const getTraceData = () => {
 }
 
 export const appLogger = {
-  logInfo: (req, message = '') => {
-    const startTime = process.hrtime.bigint();
-    const durationMs = Number(process.hrtime.bigint() - startTime) / 1_000_000;
+  logInfo: (message = '') => {
     logger.info(message, {
       type: 'DEBUG',
-      duration_ms: parseFloat(durationMs.toFixed(2)),
       trace: getTraceData(),
     });
   },
 
   // Request logging
   logRequestReceived: (req) => {
-    const startTime = process.hrtime.bigint();
+    const startTime = req.startTime;
     const durationMs = Number(process.hrtime.bigint() - startTime) / 1_000_000;
     logger.info(`Request received | ${req.method} ${req.path}`, {
       http: {
         method: req.method,
         path: req.path,
-        query: req?.query | undefined,
+        query: req?.query || undefined,
         body: req.method !== 'GET' ? req.body : undefined,
       },
       duration_ms: parseFloat(durationMs.toFixed(2)),
@@ -42,7 +39,7 @@ export const appLogger = {
   // Response logging
   logResponse: (req, res, responseData, statusCode = 200) => {
     res.set('Content-Length', Buffer.byteLength(JSON.stringify(responseData)));
-    const startTime = process.hrtime.bigint();
+    const startTime = req.startTime;
     const durationMs = Number(process.hrtime.bigint() - startTime) / 1_000_000;
     logger.info(`Request Completed | ${req.method} ${req.path}`, {
       http: {
@@ -61,7 +58,7 @@ export const appLogger = {
 
   // Error logging with transaction context
   logResponseError: (req, error, statusCode = 500) => {
-    const startTime = process.hrtime.bigint();
+    const startTime = req.startTime;
     const durationMs = Number(process.hrtime.bigint() - startTime) / 1_000_000;
     logger.error(`Request Failed | ${req.method} ${req.path}`, {
       error: error,

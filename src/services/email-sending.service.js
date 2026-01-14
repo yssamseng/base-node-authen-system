@@ -1,11 +1,15 @@
 import nodemailer from 'nodemailer';
+import APP_CONFIG from '../config/app-config.js';
 
 class EmailService {
   constructor() {
     this.transporter = null;
-    this.emailProvider = process.env.EMAIL_PROVIDER || 'smtp'; // 'smtp' or 'gmail'
-    this.fromEmail = process.env.EMAIL_FROM || 'noreply@example.com';
-    this.fromName = process.env.EMAIL_FROM_NAME || 'Application Team';
+    const { provider, from, fromName, frontendUrl } = APP_CONFIG.email;
+
+    this.emailProvider = provider;
+    this.fromEmail = from || 'noreply@example.com';
+    this.fromName = fromName;
+    this.frontendUrl = frontendUrl;
     this.testMode = false;
     this.initializeTransporter();
   }
@@ -24,8 +28,10 @@ class EmailService {
   }
 
   initializeGmailTransporter() {
+    const { gmail } = APP_CONFIG.email;
+
     // Check for Gmail configuration
-    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    if (!gmail.user || !gmail.appPassword) {
       console.warn('Gmail configuration missing. Using test mode.');
       this.testMode = true;
       return;
@@ -34,38 +40,40 @@ class EmailService {
     this.transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD // Use App Password for Gmail
+        user: gmail.user,
+        pass: gmail.appPassword
       }
     });
 
-    this.fromEmail = process.env.GMAIL_USER;
+    this.fromEmail = gmail.user;
     console.log('Gmail email service configured');
     this.verifyConnection();
   }
 
   initializeSmtpTransporter() {
+    const { smtp, from } = APP_CONFIG.email;
+
     // Check for SMTP configuration
-    if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    if (!smtp.host || !smtp.user || !smtp.pass) {
       console.warn('SMTP configuration missing. Using test mode.');
       this.testMode = true;
       return;
     }
 
     this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT) || 587,
-      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+      host: smtp.host,
+      port: smtp.port,
+      secure: smtp.secure,
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
+        user: smtp.user,
+        pass: smtp.pass
       },
       tls: {
-        rejectUnauthorized: process.env.SMTP_REJECT_UNAUTHORIZED !== 'false'
+        rejectUnauthorized: smtp.rejectUnauthorized
       }
     });
 
-    this.fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER;
+    this.fromEmail = from || smtp.user;
     console.log('SMTP email service configured');
     this.verifyConnection();
   }
@@ -121,7 +129,7 @@ class EmailService {
   }
 
   async sendVerificationEmail(to, verificationToken, userName = null) {
-    const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${verificationToken}`;
+    const verificationUrl = `${this.frontendUrl}/verify-email?token=${verificationToken}`;
 
     const subject = 'Verify Your Email Address';
     const html = this.getVerificationEmailTemplate(userName, verificationUrl);
@@ -130,7 +138,7 @@ class EmailService {
   }
 
   async sendPasswordResetEmail(to, resetToken, userName = null) {
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+    const resetUrl = `${this.frontendUrl}/reset-password?token=${resetToken}`;
 
     const subject = 'Reset Your Password';
     const html = this.getPasswordResetEmailTemplate(userName, resetUrl);

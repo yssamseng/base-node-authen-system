@@ -8,7 +8,7 @@ import { response, genResponseObj } from '../core/handler.js';
 
 // Health check route
 router.get('/health', (req, res) => {
-  appLogger.logInfo(req, 'API IS RUNNING');
+  appLogger.logInfo('API IS RUNNING');
   const result = { status: 'API is running'};
   return response(req, res, genResponseObj(req, '20000', result));
 });

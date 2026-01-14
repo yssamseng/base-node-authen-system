@@ -1,27 +1,31 @@
+import APP_CONFIG from '../config/app-config.js';
+
+const { enabled, expiryHours, allowUnverifiedLogin, resendCooldownMinutes, maxAttempts, requireForLogin, requireForProfile, requireForSensitive } = APP_CONFIG.emailVerification;
+
 // Email verification configuration
 const emailVerifyConfig = {
   // Enable/disable email verification feature
-  enabled: process.env.EMAIL_VERIFICATION_ENABLED === 'true',
+  enabled,
 
   // Email verification settings
   settings: {
     // Token expiration time in hours
-    tokenExpirationHours: parseInt(process.env.EMAIL_VERIFICATION_EXPIRY_HOURS) || 24,
+    tokenExpirationHours: expiryHours,
 
     // Allow login without email verification
-    allowUnverifiedLogin: process.env.ALLOW_UNVERIFIED_LOGIN === 'true',
+    allowUnverifiedLogin,
 
     // Resend verification email cooldown in minutes
-    resendCooldownMinutes: parseInt(process.env.VERIFICATION_RESEND_COOLDOWN) || 5,
+    resendCooldownMinutes,
 
     // Maximum verification attempts
-    maxVerificationAttempts: parseInt(process.env.MAX_VERIFICATION_ATTEMPTS) || 3,
+    maxVerificationAttempts: maxAttempts,
 
     // Require email verification for certain features
     requireVerificationFor: {
-      login: process.env.REQUIRE_EMAIL_VERIFICATION_FOR_LOGIN === 'true',
-      profileUpdate: process.env.REQUIRE_EMAIL_VERIFICATION_FOR_PROFILE === 'true',
-      sensitiveActions: process.env.REQUIRE_EMAIL_VERIFICATION_FOR_SENSITIVE === 'true'
+      login: requireForLogin,
+      profileUpdate: requireForProfile,
+      sensitiveActions: requireForSensitive
     }
   },
 
