@@ -1,3 +1,9 @@
+/**
+ * Authentication service
+ * Handles user registration, login, logout, and token management
+ * @module services/auth
+ */
+
 import { genErrorResponseObj } from '../core/handler.js';
 import { generateTokenPair, getTokenExpiration } from '../utils/jwt.util.js';
 import { generateEmailVerificationToken } from '../utils/token.util.js';
@@ -8,6 +14,10 @@ import EmailSendingService from './email-sending.service.js';
 import emailVerifyConfig from '../utils/email-verify-config.util.js';
 const { User, UserAuth, UserToken } = models;
 
+/**
+ * Register a new user
+ * Creates user, auth record, and tokens. Sends verification email if enabled.
+ */
 const register = async (req, transaction) => {
   const { username, email, password, firstName, lastName } = req.body;
 
@@ -105,6 +115,10 @@ const register = async (req, transaction) => {
   }
 };
 
+/**
+ * Authenticate user login
+ * Validates credentials and generates token pair
+ */
 const login = async (req) => {
   const { email, password } = req.body;
 
@@ -184,8 +198,10 @@ const login = async (req) => {
   };
 };
 
-
-
+/**
+ * Change user password
+ * Verifies current password and updates to new password
+ */
 const changePassword = async (req) => {
   const userId = req.user.id;
   const { currentPassword, newPassword } = req.body;
@@ -222,6 +238,10 @@ const changePassword = async (req) => {
   }
 };
 
+/**
+ * Refresh access token using refresh token
+ * Generates new token pair and updates expiry
+ */
 const refreshToken = async (req) => {
   const { refreshToken } = req.body;
 
@@ -283,6 +303,10 @@ const refreshToken = async (req) => {
   }
 };
 
+/**
+ * Logout user from current session
+ * Revokes the current access token
+ */
 const logout = async (req) => {
   const userId = req.user.id;
   const token = req.header('Authorization')?.replace('Bearer ', '');
@@ -312,6 +336,10 @@ const logout = async (req) => {
   };
 };
 
+/**
+ * Logout user from all sessions
+ * Revokes all active tokens for the user
+ */
 const logoutAll = async (req) => {
   const userId = req.user.id;
 

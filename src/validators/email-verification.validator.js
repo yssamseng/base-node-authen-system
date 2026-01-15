@@ -1,3 +1,9 @@
+/**
+ * Email verification validation schemas
+ * Joi schemas for email verification and password reset endpoints
+ * @module validators/email-verification
+ */
+
 import Joi from 'joi';
 
 // Resend verification email schema

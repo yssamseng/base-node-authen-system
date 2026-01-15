@@ -6,6 +6,14 @@ import { runWithTrace } from '../utils/trace.util.js';
 import crypto from 'crypto';
 import moment from 'moment';
 
+/**
+ * Authentication middleware
+ * Verifies JWT access token and attaches user to request
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ * @returns {Promise<void>}
+ */
 const authenticate = async (req, res, next) => {
   try {
     // Get token from header

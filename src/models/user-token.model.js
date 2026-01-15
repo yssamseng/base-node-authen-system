@@ -2,7 +2,18 @@ import { DataTypes, Model } from 'sequelize';
 import { sequelize } from '../config/database.js';
 import moment from 'moment';
 
+/**
+ * UserToken Model
+ * Manages user authentication tokens (access and refresh tokens)
+ * Supports multiple concurrent sessions per user
+ * @class UserToken
+ * @extends Model
+ */
 class UserToken extends Model {
+  /**
+   * Define model associations
+   * @param {Object} models - All available models
+   */
   static associate(models) {
     // Define association with User
     UserToken.belongsTo(models.User, {
@@ -12,7 +23,10 @@ class UserToken extends Model {
     });
   }
 
-  // Instance method to check if refresh token is expired
+  /**
+   * Check if refresh token is expired
+   * @returns {boolean} True if token is expired or missing
+   */
   isRefreshTokenExpired() {
     if (!this.refreshTokenExpiresAt) {
       return true;
@@ -20,7 +34,10 @@ class UserToken extends Model {
     return moment().isAfter(this.refreshTokenExpiresAt);
   }
 
-  // Instance method to check if access token is expired
+  /**
+   * Check if access token is expired
+   * @returns {boolean} True if token is expired or missing
+   */
   isAccessTokenExpired() {
     if (!this.accessTokenExpiresAt) {
       return true;
@@ -28,18 +45,28 @@ class UserToken extends Model {
     return moment().isAfter(this.accessTokenExpiresAt);
   }
 
-  // Instance method to check if token is active
+  /**
+   * Check if token session is active
+   * @returns {boolean} True if token is active and not expired
+   */
   isActive() {
     return this.isActive && !this.isRefreshTokenExpired();
   }
 
-  // Instance method to revoke token
+  /**
+   * Revoke token session
+   * Sets isActive to false
+   * @returns {Promise<void>}
+   */
   async revoke() {
     this.isActive = false;
     await this.save();
   }
 
-  // Custom toJSON to exclude sensitive fields
+  /**
+   * Custom toJSON to modify output
+   * @returns {Object} Token object
+   */
   toJSON() {
     const values = Object.assign({}, this.get());
     // Remove sensitive fields if needed in the future
@@ -133,7 +160,14 @@ UserToken.init({
   }
 });
 
-// Static method to enforce session limit
+/**
+ * Enforce maximum session limit per user
+ * Revokes oldest session if limit is exceeded
+ * @static
+ * @param {number} userId - User ID
+ * @param {number} maxSessions - Maximum active sessions allowed (default: 2)
+ * @returns {Promise<void>}
+ */
 UserToken.enforceSessionLimit = async (userId, maxSessions = 2) => {
   try {
     // Count active sessions for this user
@@ -165,7 +199,12 @@ UserToken.enforceSessionLimit = async (userId, maxSessions = 2) => {
   }
 };
 
-// Static method to cleanup expired tokens
+/**
+ * Clean up expired and revoked tokens
+ * Removes expired refresh tokens and inactive tokens older than 7 days
+ * @static
+ * @returns {Promise<void>}
+ */
 UserToken.cleanupExpiredTokens = async () => {
   try {
     const deletedCount = await UserToken.destroy({

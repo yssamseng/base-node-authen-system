@@ -1,3 +1,9 @@
+/**
+ * Authentication routes
+ * Endpoints for user registration, login, logout, and password management
+ * @module routes/auth
+ */
+
 import express from 'express';
 import moment from 'moment';
 const router = express.Router();

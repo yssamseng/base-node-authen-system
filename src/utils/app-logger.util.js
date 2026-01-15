@@ -1,6 +1,16 @@
+/**
+ * Application logger utility with trace data support
+ * Provides structured logging with correlation IDs and request tracking
+ * @module utils/app-logger
+ */
+
 import logger from '../core/logger.js';
 import { getStore } from './trace.util.js';
 
+/**
+ * Get trace data from async local storage
+ * @private
+ */
 const getTraceData = () => {
   // ดึงค่า correlation_id และ user_id จาก AsyncLocalStorage
   const store = getStore();
@@ -12,7 +22,13 @@ const getTraceData = () => {
   return { correlation_id, user_id };
 }
 
+/**
+ * Application logger with trace data support
+ */
 export const appLogger = {
+  /**
+   * Log info message with trace data
+   */
   logInfo: (message = '') => {
     logger.info(message, {
       type: 'DEBUG',
@@ -20,7 +36,9 @@ export const appLogger = {
     });
   },
 
-  // Request logging
+  /**
+   * Log incoming request with timing
+   */
   logRequestReceived: (req) => {
     const startTime = req.startTime;
     if (startTime) {
@@ -41,7 +59,9 @@ export const appLogger = {
     }
   },
 
-  // Response logging
+  /**
+   * Log response with timing and metadata
+   */
   logResponse: (req, res, responseData, statusCode = 200) => {
     res.set('Content-Length', Buffer.byteLength(JSON.stringify(responseData)));
     const startTime = req.startTime;
@@ -56,7 +76,7 @@ export const appLogger = {
           method: req.method,
           path: req.path,
           status_code: statusCode,
-          remote_ip: req?.ip || req?.connection?.remoteAddress,
+          remote_ip: req?.ip || req?.socket?.remoteAddress,
           user_agent: req?.get('User-Agent'),
           response: JSON.stringify(responseData),
           response_size_bytes: res.get('Content-Length') || 0,
@@ -67,7 +87,9 @@ export const appLogger = {
     }
   },
 
-  // Error logging with transaction context
+  /**
+   * Log error with request context
+   */
   logResponseError: (req, error, statusCode = 500) => {
     const startTime = req.startTime;
 
@@ -82,7 +104,7 @@ export const appLogger = {
           method: req.method,
           path: req.path,
           status_code: statusCode,
-          remote_ip: req?.ip || req?.connection?.remoteAddress,
+          remote_ip: req?.ip || req?.socket?.remoteAddress,
           user_agent: req?.get('User-Agent'),
         },
         duration_ms: parseFloat(durationMs.toFixed(2)),
@@ -91,7 +113,9 @@ export const appLogger = {
     }
   },
 
-  // Database operation logging
+  /**
+   * Log database operation
+   */
   logDatabase: (operation, tableName, details = {}) => {
     logger.debug(`Database operation: ${operation}`, {
       db: {

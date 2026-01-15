@@ -28,6 +28,11 @@ if (refreshSecret === secret) {
   );
 }
 
+/**
+ * Generate JWT access token
+ * @param {number} userId - User ID
+ * @returns {string} JWT access token
+ */
 const generateAccessToken = (userId) => {
   return jwt.sign(
     { id: userId, type: 'access' },
@@ -36,6 +41,11 @@ const generateAccessToken = (userId) => {
   );
 };
 
+/**
+ * Generate JWT refresh token
+ * @param {number} userId - User ID
+ * @returns {string} JWT refresh token
+ */
 const generateRefreshToken = (userId) => {
   return jwt.sign(
     { id: userId, type: 'refresh' },
@@ -44,6 +54,11 @@ const generateRefreshToken = (userId) => {
   );
 };
 
+/**
+ * Generate both access and refresh tokens
+ * @param {number} userId - User ID
+ * @returns {{accessToken: string, refreshToken: string}} Token pair
+ */
 const generateTokenPair = (userId) => {
   return {
     accessToken: generateAccessToken(userId),
@@ -51,6 +66,11 @@ const generateTokenPair = (userId) => {
   };
 };
 
+/**
+ * Verify JWT access token
+ * @param {string} token - JWT token to verify
+ * @returns {{valid: boolean, decoded?: Object, error?: string}} Verification result
+ */
 const verifyAccessToken = (token) => {
   try {
     const decoded = jwt.verify(token, secret);
@@ -64,6 +84,11 @@ const verifyAccessToken = (token) => {
   }
 };
 
+/**
+ * Verify JWT refresh token
+ * @param {string} token - JWT token to verify
+ * @returns {{valid: boolean, decoded?: Object, error?: string}} Verification result
+ */
 const verifyRefreshToken = (token) => {
   try {
     const decoded = jwt.verify(token, refreshSecret);
@@ -77,6 +102,11 @@ const verifyRefreshToken = (token) => {
   }
 };
 
+/**
+ * Verify JWT token (generic, uses access secret)
+ * @param {string} token - JWT token to verify
+ * @returns {Object|null} Decoded token or null if invalid
+ */
 const verifyToken = (token) => {
   try {
     return jwt.verify(token, secret);
@@ -85,7 +115,11 @@ const verifyToken = (token) => {
   }
 };
 
-// Get token expiration date
+/**
+ * Get token expiration date
+ * @param {string} token - JWT token
+ * @returns {Date|null} Expiration date or null if invalid
+ */
 const getTokenExpiration = (token) => {
   try {
     const decoded = jwt.decode(token, { complete: true });
@@ -95,7 +129,11 @@ const getTokenExpiration = (token) => {
   }
 };
 
-// Extract token type from JWT payload
+/**
+ * Extract token type from JWT payload
+ * @param {string} token - JWT token
+ * @returns {string} Token type ('access', 'refresh', or 'unknown')
+ */
 const getTokenType = (token) => {
   try {
     const decoded = jwt.decode(token);

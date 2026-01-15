@@ -1,3 +1,9 @@
+/**
+ * Main API routes aggregator
+ * Mounts all route modules under /api prefix
+ * @module routes/routes
+ */
+
 import express from 'express';
 const router = express.Router();
 import authRoutes from './auth.route.js';

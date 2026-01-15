@@ -1,3 +1,9 @@
+/**
+ * Email verification routes
+ * Endpoints for email verification and password reset functionality
+ * @module routes/email-verification
+ */
+
 import { Router } from 'express';
 import moment from 'moment';
 import { authenticate } from '../middleware/auth.middleware.js';

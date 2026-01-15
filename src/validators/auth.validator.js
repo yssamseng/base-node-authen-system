@@ -9,6 +9,10 @@ import {validateBody} from './validator.js'
 // - At least one special character
 const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
 
+/**
+ * Registration validation schema
+ * Validates username, email, password, firstName, lastName
+ */
 const registrationSchema = Joi.object({
   username: Joi.string()
     .min(3)
@@ -47,6 +51,10 @@ const registrationSchema = Joi.object({
     .allow('')
 });
 
+/**
+ * Login validation schema
+ * Validates email and password
+ */
 const loginSchema = Joi.object({
   email: Joi.string()
     .email()
@@ -62,6 +70,10 @@ const loginSchema = Joi.object({
     })
 });
 
+/**
+ * Refresh token validation schema
+ * Validates refresh token
+ */
 const refreshTokenSchema = Joi.object({
   refreshToken: Joi.string()
     .min(10)
@@ -73,6 +85,10 @@ const refreshTokenSchema = Joi.object({
     })
 });
 
+/**
+ * Change password validation schema
+ * Validates currentPassword and newPassword (with complexity requirements)
+ */
 const changePasswordSchema = Joi.object({
   currentPassword: Joi.string()
     .required()

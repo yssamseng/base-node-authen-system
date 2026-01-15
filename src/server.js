@@ -19,7 +19,9 @@ if (!fs.existsSync(logsDir)) {
   console.log('Created logs directory');
 }
 
-// Initialize database and start server
+/**
+ * Initialize database and start the Express server
+ */
 const startServer = async () => {
   try {
     // Connect to database

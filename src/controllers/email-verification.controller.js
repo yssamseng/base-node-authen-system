@@ -7,6 +7,13 @@ import {
   checkVerificationStatus
 } from '../services/email-verification.service.js';
 
+/**
+ * Resend email verification link
+ * @param {Object} req - Express request object with body containing email
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ * @returns {Promise<void>}
+ */
 const resendVerification = async (req, res, next) => {
   try {
     const result = await resendVerificationEmail(req);
@@ -16,6 +23,13 @@ const resendVerification = async (req, res, next) => {
   }
 };
 
+/**
+ * Confirm email verification with token
+ * @param {Object} req - Express request object with body containing token
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ * @returns {Promise<void>}
+ */
 const confirmVerification = async (req, res, next) => {
   try {
     const result = await verifyEmail(req);
@@ -25,6 +39,13 @@ const confirmVerification = async (req, res, next) => {
   }
 };
 
+/**
+ * Request password reset link via email
+ * @param {Object} req - Express request object with body containing email
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ * @returns {Promise<void>}
+ */
 const requestPasswordResetLink = async (req, res, next) => {
   try {
     const result = await requestPasswordReset(req);
@@ -34,6 +55,13 @@ const requestPasswordResetLink = async (req, res, next) => {
   }
 };
 
+/**
+ * Confirm password reset with token
+ * @param {Object} req - Express request object with body containing token and newPassword
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ * @returns {Promise<void>}
+ */
 const confirmPasswordReset = async (req, res, next) => {
   try {
     const result = await resetPassword(req);
@@ -43,6 +71,13 @@ const confirmPasswordReset = async (req, res, next) => {
   }
 };
 
+/**
+ * Get email verification status for authenticated user
+ * @param {Object} req - Express request object with authenticated user
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ * @returns {Promise<void>}
+ */
 const getVerificationStatus = async (req, res, next) => {
   try {
     const result = await checkVerificationStatus(req);

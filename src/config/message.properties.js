@@ -1,3 +1,9 @@
+/**
+ * Multi-language response messages (English and Thai)
+ * @module config/message.properties
+ */
+
+// Response messages for API endpoints with English and Thai translations
 export const resMessage = {
     common: {
         success: {

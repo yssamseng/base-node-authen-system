@@ -1,7 +1,20 @@
+/**
+ * Email sending service
+ * Handles email sending via SMTP or Gmail with HTML templates
+ * @module services/email-sending
+ */
+
 import nodemailer from 'nodemailer';
 import APP_CONFIG from '../config/app-config.js';
 
+/**
+ * Email service class for sending emails via SMTP or Gmail
+ */
 class EmailService {
+  /**
+   * Create email service instance
+   * Initializes transporter based on provider configuration
+   */
   constructor() {
     this.transporter = null;
     const { provider, from, fromName, frontendUrl } = APP_CONFIG.email;
@@ -14,6 +27,10 @@ class EmailService {
     this.initializeTransporter();
   }
 
+  /**
+   * Initialize email transporter based on provider
+   * @private
+   */
   initializeTransporter() {
     try {
       if (this.emailProvider === 'gmail') {
@@ -27,6 +44,10 @@ class EmailService {
     }
   }
 
+  /**
+   * Initialize Gmail transporter
+   * @private
+   */
   initializeGmailTransporter() {
     const { gmail } = APP_CONFIG.email;
 
@@ -50,6 +71,10 @@ class EmailService {
     this.verifyConnection();
   }
 
+  /**
+   * Initialize SMTP transporter
+   * @private
+   */
   initializeSmtpTransporter() {
     const { smtp, from } = APP_CONFIG.email;
 
@@ -78,6 +103,10 @@ class EmailService {
     this.verifyConnection();
   }
 
+  /**
+   * Verify email connection
+   * @private
+   */
   verifyConnection() {
     this.transporter.verify((error) => {
       if (error) {
@@ -90,6 +119,9 @@ class EmailService {
     });
   }
 
+  /**
+   * Send email with subject and HTML content
+   */
   async sendEmail(to, subject, html, text = null) {
     if (this.testMode) {
       console.log('EMAIL TEST MODE - Would send email to:', to);
@@ -116,6 +148,10 @@ class EmailService {
     }
   }
 
+  /**
+   * Convert HTML to plain text
+   * @private
+   */
   htmlToText(html) {
     return html
       .replace(/<[^>]*>/g, '')
@@ -128,6 +164,9 @@ class EmailService {
       .trim();
   }
 
+  /**
+   * Send email verification email
+   */
   async sendVerificationEmail(to, verificationToken, userName = null) {
     const verificationUrl = `${this.frontendUrl}/verify-email?token=${verificationToken}`;
 
@@ -137,6 +176,9 @@ class EmailService {
     return await this.sendEmail(to, subject, html);
   }
 
+  /**
+   * Send password reset email
+   */
   async sendPasswordResetEmail(to, resetToken, userName = null) {
     const resetUrl = `${this.frontendUrl}/reset-password?token=${resetToken}`;
 
@@ -329,7 +371,9 @@ class EmailService {
     `;
   }
 
-  // Get current email provider info
+  /**
+   * Get current email provider information
+   */
   getProviderInfo() {
     return {
       provider: this.emailProvider,

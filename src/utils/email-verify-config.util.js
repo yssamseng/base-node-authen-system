@@ -1,8 +1,14 @@
+/**
+ * Email verification configuration utility
+ * Provides centralized access to email verification settings
+ * @module utils/email-verify-config
+ */
+
 import APP_CONFIG from '../config/app-config.js';
 
 const { enabled, expiryHours, allowUnverifiedLogin, resendCooldownMinutes, maxAttempts, requireForLogin, requireForProfile, requireForSensitive } = APP_CONFIG.emailVerification;
 
-// Email verification configuration
+// Email verification configuration object with helper methods
 const emailVerifyConfig = {
   // Enable/disable email verification feature
   enabled,

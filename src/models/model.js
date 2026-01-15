@@ -1,9 +1,15 @@
+/**
+ * Model aggregator and association initializer
+ * Collects all Sequelize models and sets up associations
+ * @module models/model
+ */
+
 import User from './user.model.js';
 import UserAuth from './user-auth.model.js';
 import UserToken from './user-token.model.js';
 import RateLimit from './rate-limit.model.js';
 
-// Collect all models
+// All Sequelize models with associations initialized
 const models = {
   User,
   UserAuth,

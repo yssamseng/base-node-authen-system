@@ -1,9 +1,18 @@
+/**
+ * User profile service
+ * Handles user profile retrieval and updates
+ * @module services/user-profile
+ */
+
 import { genErrorResponseObj } from '../core/handler.js';
 import moment from 'moment';
 import models from '../models/model.js';
 import { findOne, update } from '../utils/db.util.js';
 const { User, UserAuth } = models;
 
+/**
+ * Get user profile
+ */
 const getProfile = async (req) => {
   const userId = req.user.id;
 
@@ -28,6 +37,9 @@ const getProfile = async (req) => {
   };
 };
 
+/**
+ * Update user profile
+ */
 const updateProfile = async (req) => {
   const userId = req.user.id;
   const { firstName, lastName } = req.body;

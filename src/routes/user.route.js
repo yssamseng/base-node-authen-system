@@ -1,3 +1,9 @@
+/**
+ * User profile routes
+ * Endpoints for managing user profile information
+ * @module routes/user
+ */
+
 import express from 'express';
 const router = express.Router();
 import * as userProfileController from '../controllers/user-profile.controller.js';

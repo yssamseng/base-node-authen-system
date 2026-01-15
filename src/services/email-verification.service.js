@@ -1,15 +1,22 @@
+/**
+ * Email verification service
+ * Handles email verification and password reset functionality
+ * @module services/email-verification
+ */
+
 import { genErrorResponseObj } from '../core/handler.js';
 import { generateEmailVerificationToken } from '../utils/token.util.js';
 import { generatePasswordResetToken } from '../utils/token.util.js';
 import moment from 'moment';
 import models from '../models/model.js';
-import { findOne } from '../utils/db.util.js';
 import EmailSendingService from './email-sending.service.js';
 import emailVerifyConfig from '../utils/email-verify-config.util.js';
 
 const { User, UserAuth } = models;
 
-// Resend email verification
+/**
+ * Resend email verification email
+ */
 const resendVerificationEmail = async (req) => {
   const { email } = req.body;
 
@@ -81,7 +88,9 @@ const resendVerificationEmail = async (req) => {
   };
 };
 
-// Verify email with token
+/**
+ * Verify email with token
+ */
 const verifyEmail = async (req) => {
   const { token } = req.body;
 
@@ -124,7 +133,10 @@ const verifyEmail = async (req) => {
   };
 };
 
-// Request password reset
+/**
+ * Request password reset email
+ * Always returns success to prevent email enumeration
+ */
 const requestPasswordReset = async (req) => {
   const { email } = req.body;
 
@@ -184,7 +196,9 @@ const requestPasswordReset = async (req) => {
   };
 };
 
-// Reset password with token
+/**
+ * Reset password with token
+ */
 const resetPassword = async (req) => {
   const { token, newPassword } = req.body;
 
@@ -230,7 +244,9 @@ const resetPassword = async (req) => {
   };
 };
 
-// Check email verification status
+/**
+ * Check email verification status
+ */
 const checkVerificationStatus = async (req) => {
   const userId = req.user.id;
 

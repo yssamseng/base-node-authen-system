@@ -1,7 +1,17 @@
 import { DataTypes, Model } from 'sequelize';
 import { sequelize } from '../config/database.js';
 
+/**
+ * User Model
+ * Represents user account information including profile details
+ * @class User
+ * @extends Model
+ */
 class User extends Model {
+  /**
+   * Define model associations
+   * @param {Object} models - All available models
+   */
   static associate(models) {
     // Define associations here
     // Using shared primary key pattern - UserAuth.userId references User.id

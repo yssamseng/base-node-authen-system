@@ -1,6 +1,15 @@
+/**
+ * Application constants and response codes
+ * @module config/constants
+ */
+
 import { resMessage } from './message.properties.js';
 
+// Application version
 export const APP_VERSION = '1.0.0';
+
+// Response code mapping to messages
+// Format: [XX][YYY] where XX is HTTP status category and YYY is specific code
 export const resCode = {
   //200 - Success
   20000: resMessage.common.success,
@@ -49,8 +58,11 @@ export const resCode = {
   42201: resMessage.badRequest.invalidParameter,
   42202: resMessage.badRequest.parameterIsMissing,
 };
+
+// Configuration mapping object
 export const CONFIG_MAPPING = {};
 
+// Logging constants
 export const LOG_CONSTANT = {
   LEVEL: {
     FATAL: 'fatal',

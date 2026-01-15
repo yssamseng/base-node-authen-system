@@ -7,6 +7,7 @@ import APP_CONFIG from './config/app-config.js';
 import { appLogger } from './utils/app-logger.util.js';
 import routes from './routes/routes.js';
 
+// Express application configured with security middleware, CORS, compression, and error handling
 const app = express();
 
 // ============================================

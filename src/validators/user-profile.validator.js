@@ -1,6 +1,13 @@
+/**
+ * User profile validation schemas
+ * Joi schemas for user profile update endpoints
+ * @module validators/user-profile
+ */
+
 import Joi from 'joi';
 import { validateBody } from './validator.js'
 
+// Update profile schema
 const updateProfileSchema = Joi.object({
   firstName: Joi.string()
     .max(50)

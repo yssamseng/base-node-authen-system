@@ -2,6 +2,12 @@ import { genResponseObj, responseError, response } from '../core/handler.js';
 import { sequelize } from '../config/database.js';
 import * as authService from '../services/auth.service.js';
 
+/**
+ * Register a new user account
+ * @param {Object} req - Express request object with body containing username, email, password
+ * @param {Object} res - Express response object
+ * @returns {Promise<void>}
+ */
 const register = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
@@ -16,6 +22,12 @@ const register = async (req, res) => {
   }
 };
 
+/**
+ * Authenticate user and generate tokens
+ * @param {Object} req - Express request object with body containing email, password, deviceInfo
+ * @param {Object} res - Express response object
+ * @returns {Promise<void>}
+ */
 const login = async (req, res) => {
   try {
     const result = await authService.login(req);
@@ -25,7 +37,12 @@ const login = async (req, res) => {
   }
 };
 
-
+/**
+ * Logout user from current session
+ * @param {Object} req - Express request object with authenticated user
+ * @param {Object} res - Express response object
+ * @returns {Promise<void>}
+ */
 const logout = async (req, res) => {
   try {
     const result = await authService.logout(req);
@@ -35,6 +52,12 @@ const logout = async (req, res) => {
   }
 };
 
+/**
+ * Logout user from all sessions
+ * @param {Object} req - Express request object with authenticated user
+ * @param {Object} res - Express response object
+ * @returns {Promise<void>}
+ */
 const logoutAll = async (req, res) => {
   try {
     const result = await authService.logoutAll(req);
@@ -44,6 +67,12 @@ const logoutAll = async (req, res) => {
   }
 };
 
+/**
+ * Refresh access token using refresh token
+ * @param {Object} req - Express request object with body containing refreshToken
+ * @param {Object} res - Express response object
+ * @returns {Promise<void>}
+ */
 const refreshToken = async (req, res) => {
   try {
     const result = await authService.refreshToken(req);
@@ -53,6 +82,12 @@ const refreshToken = async (req, res) => {
   }
 };
 
+/**
+ * Change user password
+ * @param {Object} req - Express request object with body containing oldPassword, newPassword
+ * @param {Object} res - Express response object
+ * @returns {Promise<void>}
+ */
 const changePassword = async (req, res) => {
   try {
     const result = await authService.changePassword(req);

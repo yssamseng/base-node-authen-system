@@ -2,17 +2,28 @@ import { DataTypes, Model, Op } from 'sequelize';
 import { sequelize } from '../config/database.js';
 import moment from 'moment';
 
+/**
+ * RateLimit Model
+ * Tracks API request counts for rate limiting functionality
+ * @class RateLimit
+ * @extends Model
+ */
 class RateLimit extends Model {
+  /**
+   * Define model associations
+   * @param {Object} models - All available models
+   */
   static associate(models) {
     // No associations needed
   }
 
   /**
    * Check if a request should be rate limited
+   * @static
    * @param {string} key - Unique identifier (ip:path or userId:path)
    * @param {number} maxRequests - Maximum requests allowed
    * @param {number} windowMs - Time window in milliseconds
-   * @returns {Promise<{allowed: boolean, remaining: number, resetAt: Date}>}
+   * @returns {Promise<{allowed: boolean, remaining: number, resetAt: Date, count: number}>}
    */
   static async checkRateLimit(key, maxRequests, windowMs) {
     const now = moment().toDate();
@@ -50,8 +61,10 @@ class RateLimit extends Model {
   }
 
   /**
-   * Reset rate limit for a key (for testing or manual reset)
+   * Reset rate limit for a key
+   * @static
    * @param {string} key - Unique identifier
+   * @returns {Promise<void>}
    */
   static async resetLimit(key) {
     await RateLimit.destroy({
@@ -60,8 +73,11 @@ class RateLimit extends Model {
   }
 
   /**
-   * Clean up old rate limit records (should run periodically)
-   * @param {number} hoursOld - Delete records older than this many hours
+   * Clean up old rate limit records
+   * Should be run periodically (e.g., via cron job)
+   * @static
+   * @param {number} hoursOld - Delete records older than this many hours (default: 1)
+   * @returns {Promise<number>} Number of deleted records
    */
   static async cleanupOldRecords(hoursOld = 1) {
     const cutoffDate = moment().subtract(hoursOld, 'hours').toDate();
@@ -75,10 +91,11 @@ class RateLimit extends Model {
 
   /**
    * Get statistics for a key
+   * @static
    * @param {string} key - Unique identifier
+   * @returns {Promise<{total: number, last24h: number, lastRequestAt: Date}>}
    */
   static async getStats(key) {
-    const now = moment().toDate();
     const last24h = moment().subtract(24, 'hours').toDate();
 
     const [total, last24hCount, lastRequest] = await Promise.all([

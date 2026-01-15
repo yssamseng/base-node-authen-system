@@ -1,6 +1,12 @@
 import { genResponseObj, responseError, response } from '../core/handler.js';
 import * as userProfileService from '../services/user-profile.service.js';
 
+/**
+ * Get user profile information
+ * @param {Object} req - Express request object with authenticated user
+ * @param {Object} res - Express response object
+ * @returns {Promise<void>}
+ */
 const getProfile = async (req, res) => {
   try {
     const result = await userProfileService.getProfile(req);
@@ -10,6 +16,12 @@ const getProfile = async (req, res) => {
   }
 };
 
+/**
+ * Update user profile information
+ * @param {Object} req - Express request object with body containing profile fields to update
+ * @param {Object} res - Express response object
+ * @returns {Promise<void>}
+ */
 const updateProfile = async (req, res) => {
   try {
     const result = await userProfileService.updateProfile(req);

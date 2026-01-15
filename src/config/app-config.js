@@ -1,3 +1,8 @@
+/**
+ * Application configuration loaded from environment variables
+ * @module config/app-config
+ */
+
 import 'dotenv/config';
 
 import path from 'path';
@@ -11,6 +16,7 @@ const NODE_ENV = process.env.NODE_ENV || "development";
 console.log(`✅ Loaded environment`);
 console.log(`🌍 NODE_ENV = ${NODE_ENV}`);
 
+// Centralized application configuration object
 const APP_CONFIG = {
   service: {
     name: process.env.SERVICE_NAME || "node-auth-api",

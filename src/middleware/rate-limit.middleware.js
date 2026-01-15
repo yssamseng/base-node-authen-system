@@ -4,6 +4,13 @@ import { appLogger } from '../utils/app-logger.util.js';
  * In-memory rate limiting middleware
  * NOTE: For production, use rate-limit-db.middleware.js instead
  * This resets on server restart and doesn't work with multiple servers
+ * @param {Object} options - Rate limit options
+ * @param {number} options.windowMs - Time window in milliseconds (default: 15 minutes)
+ * @param {number} options.maxAttempts - Maximum requests per window (default: 5)
+ * @param {string} options.message - Error message when limit exceeded
+ * @param {boolean} options.skipSuccessfulRequests - Don't count successful requests (default: true)
+ * @param {Function} options.keyGenerator - Function to generate unique key (default: ip:path)
+ * @returns {Function} Express middleware
  */
 const rateLimit = (options = {}) => {
   const {

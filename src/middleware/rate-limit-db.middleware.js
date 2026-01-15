@@ -4,6 +4,7 @@ import { Op } from 'sequelize';
 
 /**
  * Database-backed rate limiting middleware
+ * For production use with persistent storage and multi-server support
  * @param {Object} options - Rate limit options
  * @param {number} options.windowMs - Time window in milliseconds (default: 15 minutes)
  * @param {number} options.maxRequests - Maximum requests per window (default: 5)

@@ -1,4 +1,10 @@
-// logger.js
+/**
+ * Winston Logger Configuration
+ * Provides structured logging with console and file transports
+ * Integrates with Better Stack (Logtail) for centralized logging in production
+ * @module core/logger
+ */
+
 import winston from 'winston';
 import { Logtail } from '@logtail/node';
 import { LogtailTransport } from '@logtail/winston';
@@ -47,6 +53,7 @@ if (environment !== 'production') {
   );
 }
 
+// Winston logger instance with file and optional console/Logtail transports
 const logger = winston.createLogger({
   level: environment === 'production' ? LOG_CONSTANT.LEVEL.INFO : LOG_CONSTANT.LEVEL.DEBUG,
   format: winston.format.combine(

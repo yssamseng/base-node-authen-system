@@ -1,9 +1,15 @@
+/**
+ * Database configuration and connection management
+ * @module config/database
+ */
+
 import { Sequelize } from 'sequelize';
 import APP_CONFIG from './app-config.js';
 
 const { name, user, password, host, port, dialect } = APP_CONFIG.database;
 const isDevelopment = APP_CONFIG.server.env === 'development';
 
+// Sequelize ORM instance configured with database connection settings
 const sequelize = new Sequelize(
   name,
   user,
@@ -22,6 +28,9 @@ const sequelize = new Sequelize(
   }
 );
 
+/**
+ * Establishes database connection and synchronizes models
+ */
 const connectDB = async () => {
   try {
     await sequelize.authenticate();

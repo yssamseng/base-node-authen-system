@@ -3,7 +3,18 @@ import bcrypt from 'bcryptjs';
 import { sequelize } from '../config/database.js';
 import moment from 'moment';
 
+/**
+ * UserAuth Model
+ * Stores authentication credentials and security settings for users
+ * Uses shared primary key pattern with User model (userId = User.id)
+ * @class UserAuth
+ * @extends Model
+ */
 class UserAuth extends Model {
+  /**
+   * Define model associations
+   * @param {Object} models - All available models
+   */
   static associate(models) {
     // Define associations here
     UserAuth.belongsTo(models.User, {
@@ -12,12 +23,19 @@ class UserAuth extends Model {
     });
   }
 
-  // Instance method to compare password
+  /**
+   * Compare candidate password with stored hashed password
+   * @param {string} candidatePassword - Plain text password to verify
+   * @returns {Promise<boolean>} True if password matches
+   */
   async comparePassword(candidatePassword) {
     return await bcrypt.compare(candidatePassword, this.password);
   }
 
-  // Instance method to check if account is locked
+  /**
+   * Check if account is currently locked due to failed login attempts
+   * @returns {boolean} True if account is locked
+   */
   isLocked() {
     if (!this.lockedUntil) {
       return false;
@@ -25,7 +43,11 @@ class UserAuth extends Model {
     return moment().isBefore(this.lockedUntil);
   }
 
-  // Instance method to increment failed attempts
+  /**
+   * Increment failed login attempts and lock account if threshold reached
+   * Locks account for 30 minutes after 5 failed attempts
+   * @returns {Promise<void>}
+   */
   async incrementFailedAttempts() {
     this.failedAttempts += 1;
 
@@ -38,14 +60,21 @@ class UserAuth extends Model {
     await this.save();
   }
 
-  // Instance method to reset failed attempts
+  /**
+   * Reset failed login attempts and unlock account
+   * Called after successful login
+   * @returns {Promise<void>}
+   */
   async resetFailedAttempts() {
     this.failedAttempts = 0;
     this.lockedUntil = null;
     await this.save();
   }
 
-  // Instance method to check if email verification is expired
+  /**
+   * Check if email verification token has expired
+   * @returns {boolean} True if token is expired or missing
+   */
   isEmailVerificationExpired() {
     if (!this.emailVerificationExpiresAt) {
       return true;
@@ -53,7 +82,10 @@ class UserAuth extends Model {
     return moment().isAfter(this.emailVerificationExpiresAt);
   }
 
-  // Instance method to check if password reset is expired
+  /**
+   * Check if password reset token has expired
+   * @returns {boolean} True if token is expired or missing
+   */
   isPasswordResetExpired() {
     if (!this.passwordResetExpiresAt) {
       return true;
@@ -61,7 +93,10 @@ class UserAuth extends Model {
     return moment().isAfter(this.passwordResetExpiresAt);
   }
 
-  // Instance method to mark email as verified
+  /**
+   * Mark email as verified and clear verification token
+   * @returns {Promise<void>}
+   */
   async markEmailAsVerified() {
     this.isVerified = true;
     this.emailVerificationToken = null;
@@ -69,8 +104,10 @@ class UserAuth extends Model {
     await this.save();
   }
 
-  
-  // Remove password from JSON response
+  /**
+   * Custom toJSON to exclude sensitive password field
+   * @returns {Object} UserAuth object without password
+   */
   toJSON() {
     const values = Object.assign({}, this.get());
     delete values.password;
