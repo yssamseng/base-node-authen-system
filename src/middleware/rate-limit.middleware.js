@@ -1,65 +1,70 @@
+import { appLogger } from '../utils/app-logger.util.js';
+
+/**
+ * In-memory rate limiting middleware
+ * NOTE: For production, use rate-limit-db.middleware.js instead
+ * This resets on server restart and doesn't work with multiple servers
+ */
 const rateLimit = (options = {}) => {
-    const {
-        windowMs = 15 * 60 * 1000, // 15 minutes
-        maxAttempts = 5,
-        message = 'Too many authentication attempts, please try again later',
-        skipSuccessfulRequests = true,
-        keyGenerator = (req) => `${req.ip}:${req.path}`,
-    } = options;
+  const {
+    windowMs = 15 * 60 * 1000, // 15 minutes
+    maxAttempts = 5,
+    message = 'Too many authentication attempts, please try again later',
+    skipSuccessfulRequests = true,
+    keyGenerator = (req) => `${req.ip}:${req.path}`,
+  } = options;
 
-    const attempts = new Map();
+  const attempts = new Map();
 
-    return (req, res, next) => {
-        const key = keyGenerator(req);
-        const now = Date.now();
-        const windowStart = now - windowMs;
+  return (req, res, next) => {
+    const key = keyGenerator(req);
+    const now = Date.now();
+    const windowStart = now - windowMs;
 
-        // Clean up old attempts for this key
-        if (attempts.has(key)) {
-            const filtered = attempts.get(key).filter(time => time > windowStart);
-            if (filtered.length === 0) {
-                attempts.delete(key);
-            } else {
-                attempts.set(key, filtered);
-            }
+    // Clean up old attempts for this key
+    if (attempts.has(key)) {
+      const filtered = attempts.get(key).filter(time => time > windowStart);
+      if (filtered.length === 0) {
+        attempts.delete(key);
+      } else {
+        attempts.set(key, filtered);
+      }
+    }
+
+    // Check limit
+    const userAttempts = attempts.get(key) || [];
+    if (userAttempts.length >= maxAttempts) {
+      appLogger.logInfo(`Rate limit exceeded for ${key} (${userAttempts.length} attempts)`);
+
+      return res.status(429).json({
+        success: false,
+        message: message,
+        retryAfter: Math.ceil(windowMs / 1000)
+      });
+    }
+
+    // Add current attempt
+    const attemptTime = now;
+    userAttempts.push(attemptTime);
+    attempts.set(key, userAttempts);
+
+    if (skipSuccessfulRequests) {
+      res.on('finish', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          const currentAttempts = (attempts.get(key) || []).filter(
+            t => t !== attemptTime
+          );
+          if (currentAttempts.length === 0) {
+            attempts.delete(key);
+          } else {
+            attempts.set(key, currentAttempts);
+          }
         }
+      });
+    }
 
-        // Check limit
-        const userAttempts = attempts.get(key) || [];
-        if (userAttempts.length >= maxAttempts) {
-            logger.warn('Authentication rate limit exceeded', {
-                ip: req.ip,
-                path: req.path,
-                attempts: userAttempts.length,
-                windowMs,
-            });
-
-            const error = new AppError(RESPONSE_CODES.TOO_MANY_REQUESTS, message);
-            return next(error);
-        }
-
-        // Add current attempt
-        const attemptTime = now;
-        userAttempts.push(attemptTime);
-        attempts.set(key, userAttempts);
-
-        if (skipSuccessfulRequests) {
-            res.on('finish', () => {
-                if (res.statusCode >= 200 && res.statusCode < 300) {
-                    const currentAttempts = (attempts.get(key) || []).filter(
-                        t => t !== attemptTime
-                    );
-                    if (currentAttempts.length === 0) {
-                        attempts.delete(key);
-                    } else {
-                        attempts.set(key, currentAttempts);
-                    }
-                }
-            });
-        }
-
-        next();
-    };
+    next();
+  };
 };
 
 export { rateLimit };

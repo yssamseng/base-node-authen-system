@@ -1,12 +1,14 @@
 import User from './user.model.js';
 import UserAuth from './user-auth.model.js';
 import UserToken from './user-token.model.js';
+import RateLimit from './rate-limit.model.js';
 
 // Collect all models
 const models = {
   User,
   UserAuth,
-  UserToken
+  UserToken,
+  RateLimit
 };
 
 // Call associate method for each model if it exists
@@ -17,4 +19,3 @@ Object.keys(models).forEach(modelName => {
 });
 
 export default models;
-

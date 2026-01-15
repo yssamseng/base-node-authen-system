@@ -4,16 +4,23 @@ const router = express.Router();
 import * as authController from '../controllers/auth.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { validateRegistration, validateLogin, validateRefreshToken, validateChangePassword } from '../validators/auth.validator.js';
-import { rateLimit } from '../middleware/rate-limit.middleware.js';
+import { rateLimitDB } from '../middleware/rate-limit-db.middleware.js';
 
-const windowMs15Min = moment.duration(15, 'minutes').asMilliseconds(); // 15 minutes
-const valRateLimit = rateLimit({ windowMs: windowMs15Min, maxAttempts: 5 }); // 5 attempts per 15 minutes
-// Public routes
-router.post('/register', valRateLimit, validateRegistration, authController.register);
-router.post('/login', valRateLimit, validateLogin, authController.login);
-router.post('/refresh-token', valRateLimit, validateRefreshToken, authController.refreshToken);
+// Rate limiting: 5 attempts per 15 minutes for auth endpoints
+const windowMs15Min = moment.duration(15, 'minutes').asMilliseconds();
+const authRateLimit = rateLimitDB({
+  windowMs: windowMs15Min,
+  maxRequests: 5,
+  message: 'Too many authentication attempts, please try again later',
+  skipSuccessfulRequests: true // Don't count successful requests
+});
 
-// Protected routes
+// Public routes with rate limiting
+router.post('/register', authRateLimit, validateRegistration, authController.register);
+router.post('/login', authRateLimit, validateLogin, authController.login);
+router.post('/refresh-token', authRateLimit, validateRefreshToken, authController.refreshToken);
+
+// Protected routes (no rate limit - already have auth middleware)
 router.post('/logout', authenticate, authController.logout);
 router.post('/logout-all', authenticate, authController.logoutAll);
 router.post('/change-password', authenticate, validateChangePassword, authController.changePassword);

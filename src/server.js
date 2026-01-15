@@ -5,6 +5,7 @@ import app from './app.js';
 import { connectDB } from './config/database.js';
 import { appLogger } from './utils/app-logger.util.js';
 import APP_CONFIG from './config/app-config.js';
+import { scheduleRateLimitCleanup, runRateLimitCleanup } from './jobs/rate-limit-cleanup.job.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,6 +25,12 @@ const startServer = async () => {
     // Connect to database
     appLogger.logInfo('Connecting to database...');
     await connectDB();
+
+    // Run initial rate limit cleanup
+    await runRateLimitCleanup();
+
+    // Schedule periodic rate limit cleanup (every hour)
+    scheduleRateLimitCleanup();
 
     // Start server
     app.listen(PORT, () => {
