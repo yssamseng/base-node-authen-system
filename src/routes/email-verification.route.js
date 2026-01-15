@@ -28,12 +28,12 @@ const emailRateLimit = rateLimitDB({
 });
 
 // Public routes - no authentication required
-router.post('/resend-verification', emailRateLimit, validateBody(resendVerificationSchema), emailVerification.resendVerification);
-router.post('/verify', validateBody(verifyEmailSchema), emailVerification.confirmVerification);
-router.post('/request-password-reset', emailRateLimit, validateBody(requestPasswordResetSchema), emailVerification.requestPasswordResetLink);
-router.post('/reset-password', validateBody(resetPasswordSchema), emailVerification.confirmPasswordReset);
+router.post('/resend-verification', emailRateLimit, validateBody(resendVerificationSchema), emailVerification.resendVerificationEmail);
+router.post('/verify', validateBody(verifyEmailSchema), emailVerification.verifyEmail);
+router.post('/request-password-reset', emailRateLimit, validateBody(requestPasswordResetSchema), emailVerification.requestPasswordReset);
+router.post('/reset-password', validateBody(resetPasswordSchema), emailVerification.resetPassword);
 
 // Protected routes - authentication required
-router.get('/status', authenticate, emailVerification.getVerificationStatus);
+router.get('/status', authenticate, emailVerification.checkVerificationStatus);
 
 export default router;

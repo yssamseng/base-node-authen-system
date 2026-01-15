@@ -14,6 +14,10 @@ const { User, UserAuth } = models;
  * Get user profile
  */
 const getProfile = async (req) => {
+  if (!req.user) {
+    throw genErrorResponseObj(req, '40403', 'User not found');
+  }
+
   const userId = req.user.id;
 
   const user = await findOne(User, {
@@ -41,6 +45,10 @@ const getProfile = async (req) => {
  * Update user profile
  */
 const updateProfile = async (req) => {
+  if (!req.user) {
+    throw genErrorResponseObj(req, '40403', 'User not found');
+  }
+
   const userId = req.user.id;
   const { firstName, lastName } = req.body;
 

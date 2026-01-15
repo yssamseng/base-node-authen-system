@@ -308,6 +308,13 @@ const refreshToken = async (req) => {
  * Revokes the current access token
  */
 const logout = async (req) => {
+  if (!req.user) {
+    return {
+      message: 'Logged out successfully',
+      logoutTime: moment().format('YYYY-MM-DD HH:mm:ss')
+    };
+  }
+
   const userId = req.user.id;
   const token = req.header('Authorization')?.replace('Bearer ', '');
 

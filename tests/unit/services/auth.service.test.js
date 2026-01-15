@@ -1,17 +1,17 @@
 import { describe, test, expect, jest, beforeEach, afterEach } from '@jest/globals';
 import * as authService from '../../../src/services/auth.service.js';
 import { genErrorResponseObj } from '../../../src/core/handler.js';
-import { generateTokenPair, getTokenExpiration } from '../../../src/utils/jwt.util.js';
+import { generateTokenPair } from '../../../src/utils/jwt.util.js';
 import moment from 'moment';
 
 // Mock dependencies
 jest.mock('../../../src/core/handler.js');
 jest.mock('../../../src/utils/jwt.util.js');
 jest.mock('../../../src/utils/db.util.js');
-jest.mock('../../../src/models/index.js');
+jest.mock('../../../src/models/model.js');
 
-import { findOne, create, update } from '../../../src/utils/db.util.js';
-import models from '../../../src/models/index.js';
+import { findOne, create } from '../../../src/utils/db.util.js';
+import models from '../../../src/models/model.js';
 const { User, UserAuth } = models;
 
 describe('Auth Service', () => {
@@ -26,7 +26,8 @@ describe('Auth Service', () => {
       body: {},
       user: null,
       headers: {},
-      get: jest.fn()
+      get: jest.fn(),
+      header: jest.fn()
     };
 
     // Mock transaction object
@@ -39,11 +40,8 @@ describe('Auth Service', () => {
     // Mock generateTokenPair
     generateTokenPair.mockReturnValue({ accessToken: 'mock_access_token', refreshToken: 'mock_refresh_token' });
 
-    // Mock getTokenExpiration
-    getTokenExpiration.mockReturnValue(moment().add(15, 'minutes').toDate());
-
     // Mock genErrorResponseObj
-    genErrorResponseObj.mockImplementation((req, code, message) => {
+    genErrorResponseObj.mockImplementation((_req, code, message) => {
       const error = new Error(message);
       error.resCode = code;
       return error;
@@ -103,14 +101,17 @@ describe('Auth Service', () => {
         data: {
           userId: mockUser.id,
           password: validUserData.password,
-          isVerified: false
+          isVerified: true
         },
         transaction: mockTransaction
       });
-      expect(generateToken).toHaveBeenCalledWith(mockUser.id);
+      expect(generateTokenPair).toHaveBeenCalledWith(mockUser.id);
       expect(result).toEqual({
         user: mockUser.toJSON(),
-        token: 'mock_jwt_token'
+        accessToken: 'mock_access_token',
+        refreshToken: 'mock_refresh_token',
+        expiresIn: expect.any(Number),
+        isVerified: true
       });
     });
 
@@ -189,10 +190,12 @@ describe('Auth Service', () => {
       expect(mockUser.auth.comparePassword).toHaveBeenCalledWith(validLoginData.password);
       expect(mockUser.auth.resetFailedAttempts).toHaveBeenCalled();
       expect(mockUser.auth.save).toHaveBeenCalled();
-      expect(generateToken).toHaveBeenCalledWith(mockUser.id);
+      expect(generateTokenPair).toHaveBeenCalledWith(mockUser.id);
       expect(result).toEqual({
         user: mockUser.toJSON(),
-        token: 'mock_jwt_token',
+        accessToken: 'mock_access_token',
+        refreshToken: 'mock_refresh_token',
+        expiresIn: expect.any(Number),
         lastLogin: expect.any(String),
         isVerified: false
       });
@@ -276,165 +279,23 @@ describe('Auth Service', () => {
     });
   });
 
-  describe('getProfile', () => {
-    test('should get user profile successfully', async () => {
-      const mockUser = {
-        id: 1,
-        username: 'testuser',
-        createdAt: moment('2023-11-01').toDate(),
-        toJSON: () => ({ id: 1, username: 'testuser' }),
-        auth: {
-          lastLogin: moment('2023-12-01 12:00:00').toDate(),
-          isVerified: false,
-          failedAttempts: 0
-        }
-      };
-
-      mockReq.user = { id: 1 };
-      findOne.mockResolvedValue(mockUser);
-
-      const result = await authService.getProfile(mockReq);
-
-      expect(findOne).toHaveBeenCalledWith(User, {
-        pk: 1,
-        include: [{
-          model: UserAuth,
-          as: 'auth',
-          attributes: ['lastLogin', 'isVerified', 'failedAttempts']
-        }]
-      });
-      expect(result).toEqual({
-        user: mockUser.toJSON(),
-        lastLogin: expect.stringMatching(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/),
-        memberSince: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
-        isVerified: false
-      });
-    });
-
-    test('should throw error if user not found', async () => {
-      mockReq.user = { id: 1 };
-      findOne.mockResolvedValue(null);
-
-      await expect(authService.getProfile(mockReq)).rejects.toThrow('User not found');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40403', 'User not found');
-    });
-
-    test('should handle user without auth data', async () => {
-      const mockUser = {
-        id: 1,
-        username: 'testuser',
-        createdAt: moment().toDate(),
-        toJSON: () => ({ id: 1, username: 'testuser' }),
-        auth: null
-      };
-
-      mockReq.user = { id: 1 };
-      findOne.mockResolvedValue(mockUser);
-
-      const result = await authService.getProfile(mockReq);
-
-      expect(result).toEqual({
-        user: mockUser.toJSON(),
-        lastLogin: null,
-        memberSince: expect.any(String),
-        isVerified: false
-      });
-    });
-  });
-
-  describe('updateProfile', () => {
-    test('should update user profile successfully', async () => {
-      const mockUser = {
-        id: 1,
-        username: 'testuser',
-        firstName: 'Old',
-        lastName: 'Name',
-        updatedAt: moment('2023-12-01 12:00:00').toDate(),
-        toJSON: () => ({ id: 1, username: 'testuser', firstName: 'Updated', lastName: 'Name' })
-      };
-
-      mockReq.user = { id: 1 };
-      mockReq.body = {
-        firstName: 'Updated',
-        lastName: 'Name'
-      };
-
-      findOne
-        .mockResolvedValueOnce(mockUser) // Find existing user
-        .mockResolvedValueOnce(mockUser); // Return updated user
-
-      update.mockResolvedValue(mockUser);
-
-      const result = await authService.updateProfile(mockReq);
-
-      expect(findOne).toHaveBeenCalledWith(User, { pk: 1 });
-      expect(update).toHaveBeenCalledWith(User, {
-        data: {
-          firstName: 'Updated',
-          lastName: 'Name'
-        },
-        criteria: { id: 1 }
-      });
-      expect(result).toEqual({
-        user: mockUser.toJSON(),
-        updatedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)
-      });
-    });
-
-    test('should update only provided fields', async () => {
-      const mockUser = {
-        id: 1,
-        firstName: 'Old',
-        lastName: 'Name',
-        updatedAt: moment().toDate(),
-        toJSON: () => ({ id: 1, firstName: 'Updated', lastName: 'Name' })
-      };
-
-      mockReq.user = { id: 1 };
-      mockReq.body = {
-        firstName: 'Updated'
-        // lastName not provided
-      };
-
-      findOne
-        .mockResolvedValueOnce(mockUser)
-        .mockResolvedValueOnce(mockUser);
-      update.mockResolvedValue(mockUser);
-
-      await authService.updateProfile(mockReq);
-
-      expect(update).toHaveBeenCalledWith(User, {
-        data: {
-          firstName: 'Updated'
-          // lastName should not be included
-        },
-        criteria: { id: 1 }
-      });
-    });
-
-    test('should throw error if user not found', async () => {
-      mockReq.user = { id: 1 };
-      mockReq.body = { firstName: 'Updated' };
-      findOne.mockResolvedValue(null);
-
-      await expect(authService.updateProfile(mockReq)).rejects.toThrow('User not found');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40403', 'User not found');
-      expect(update).not.toHaveBeenCalled();
-    });
-  });
-
   describe('logout', () => {
     test('should logout successfully', async () => {
-      const result = await authService.logout();
+      const mockUser = { id: 1, username: 'testuser' };
+      mockReq.user = mockUser;
+
+      const result = await authService.logout(mockReq);
 
       expect(result).toEqual({
+        message: 'Logged out successfully',
         logoutTime: expect.stringMatching(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)
       });
     });
 
     test('should always return logout time regardless of user context', async () => {
       // Logout should work even without req.user
-      const result = await authService.logout();
+      mockReq.user = null;
+      const result = await authService.logout(mockReq);
 
       expect(result).toHaveProperty('logoutTime');
       expect(typeof result.logoutTime).toBe('string');
@@ -450,6 +311,13 @@ describe('Auth Service', () => {
     });
 
     test('should handle unexpected errors gracefully', async () => {
+      const validUserData = {
+        username: 'testuser',
+        email: 'test@example.com',
+        password: 'password123',
+        firstName: 'Test',
+        lastName: 'User'
+      };
       mockReq.body = validUserData;
       findOne.mockImplementation(() => {
         throw new Error('Unexpected error');

@@ -4,13 +4,13 @@ import { verifyAccessToken } from '../../../src/utils/jwt.util.js';
 
 // Mock dependencies
 jest.mock('../../../src/utils/jwt.util.js');
-jest.mock('../../../src/models/index.js');
+jest.mock('../../../src/models/model.js');
 jest.mock('../../../src/core/handler.js');
-jest.mock('../../../src/core/trace.js');
+jest.mock('../../../src/utils/trace.util.js');
 
-import models from '../../../src/models/index.js';
+import models from '../../../src/models/model.js';
 import { responseError, genErrorResponseObj } from '../../../src/core/handler.js';
-import { runWithTrace } from '../../../src/core/trace.js';
+import { runWithTrace } from '../../../src/utils/trace.util.js';
 
 const { User, UserToken } = models;
 
@@ -47,6 +47,11 @@ describe('Auth Middleware', () => {
       resCode: 'TEST_CODE',
       message: 'Test error message'
     });
+
+    // Mock runWithTrace to call the next function
+    runWithTrace.mockImplementation((store, callback) => {
+      callback();
+    });
   });
 
   afterEach(() => {
@@ -57,7 +62,10 @@ describe('Auth Middleware', () => {
     test('should extract token from Authorization header with Bearer prefix', async () => {
       const token = 'valid_jwt_token';
       const mockUser = { id: 1, isActive: true };
-      const mockTokenRecord = { save: jest.fn().mockResolvedValue() };
+      const mockTokenRecord = {
+        save: jest.fn().mockResolvedValue(),
+        isAccessTokenExpired: jest.fn().mockReturnValue(false)
+      };
 
       mockReq.header.mockReturnValue(`Bearer ${token}`);
 
@@ -108,7 +116,10 @@ describe('Auth Middleware', () => {
     test('should proceed with valid token', async () => {
       const token = 'valid_token';
       const mockUser = { id: 1, isActive: true };
-      const mockTokenRecord = { save: jest.fn().mockResolvedValue() };
+      const mockTokenRecord = {
+        save: jest.fn().mockResolvedValue(),
+        isAccessTokenExpired: jest.fn().mockReturnValue(false)
+      };
 
       mockReq.header.mockReturnValue(`Bearer ${token}`);
       verifyAccessToken.mockReturnValue({
@@ -180,7 +191,10 @@ describe('Auth Middleware', () => {
     test('should proceed with existing active user', async () => {
       const token = 'valid_token';
       const mockUser = { id: 1, isActive: true };
-      const mockTokenRecord = { save: jest.fn().mockResolvedValue() };
+      const mockTokenRecord = {
+        save: jest.fn().mockResolvedValue(),
+        isAccessTokenExpired: jest.fn().mockReturnValue(false)
+      };
 
       mockReq.header.mockReturnValue(`Bearer ${token}`);
       verifyAccessToken.mockReturnValue({
@@ -199,7 +213,10 @@ describe('Auth Middleware', () => {
 
     test('should reject non-existent user with error code 40403', async () => {
       const token = 'valid_token';
-      const mockTokenRecord = { save: jest.fn().mockResolvedValue() };
+      const mockTokenRecord = {
+        save: jest.fn().mockResolvedValue(),
+        isAccessTokenExpired: jest.fn().mockReturnValue(false)
+      };
 
       mockReq.header.mockReturnValue(`Bearer ${token}`);
       verifyAccessToken.mockReturnValue({
@@ -219,7 +236,10 @@ describe('Auth Middleware', () => {
     test('should reject inactive user with error code 40004', async () => {
       const token = 'valid_token';
       const mockUser = { id: 1, isActive: false };
-      const mockTokenRecord = { save: jest.fn().mockResolvedValue() };
+      const mockTokenRecord = {
+        save: jest.fn().mockResolvedValue(),
+        isAccessTokenExpired: jest.fn().mockReturnValue(false)
+      };
 
       mockReq.header.mockReturnValue(`Bearer ${token}`);
       verifyAccessToken.mockReturnValue({
@@ -305,7 +325,10 @@ describe('Auth Middleware', () => {
 
     test('should handle errors during user lookup', async () => {
       const token = 'valid_token';
-      const mockTokenRecord = { save: jest.fn().mockResolvedValue() };
+      const mockTokenRecord = {
+        save: jest.fn().mockResolvedValue(),
+        isAccessTokenExpired: jest.fn().mockReturnValue(false)
+      };
 
       mockReq.header.mockReturnValue(`Bearer ${token}`);
       verifyAccessToken.mockReturnValue({
@@ -349,7 +372,10 @@ describe('Auth Middleware', () => {
     test('should call runWithTrace with user context', async () => {
       const token = 'valid_token';
       const mockUser = { id: 1, isActive: true };
-      const mockTokenRecord = { save: jest.fn().mockResolvedValue() };
+      const mockTokenRecord = {
+        save: jest.fn().mockResolvedValue(),
+        isAccessTokenExpired: jest.fn().mockReturnValue(false)
+      };
 
       mockReq.header.mockReturnValue(`Bearer ${token}`);
       verifyAccessToken.mockReturnValue({

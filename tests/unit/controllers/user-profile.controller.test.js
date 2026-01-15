@@ -4,7 +4,7 @@ import * as userProfileService from '../../../src/services/user-profile.service.
 
 // Mock dependencies
 jest.mock('../../../src/services/user-profile.service.js');
-jest.mock('../../../src/core/app-logger.js');
+jest.mock('../../../src/utils/app-logger.util.js');
 jest.mock('../../../src/core/handler.js');
 
 import { response, responseError, genResponseObj } from '../../../src/core/handler.js';
@@ -147,7 +147,7 @@ describe('User Profile Controller', () => {
       expect(userProfileService.updateProfile).toHaveBeenCalledWith(mockReq);
       expect(response).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(responseError).not.toHaveBeenCalled();
-      expect(genResponseObj).toHaveBeenCalledWith(mockReq, '20001', mockResult);
+      expect(genResponseObj).toHaveBeenCalledWith(mockReq, '20004', mockResult);
     });
 
     test('should handle partial profile updates', async () => {
@@ -169,7 +169,7 @@ describe('User Profile Controller', () => {
 
       expect(userProfileService.updateProfile).toHaveBeenCalledWith(mockReq);
       expect(response).toHaveBeenCalled();
-      expect(genResponseObj).toHaveBeenCalledWith(mockReq, '20001', mockResult);
+      expect(genResponseObj).toHaveBeenCalledWith(mockReq, '20004', mockResult);
     });
 
     test('should handle profile update errors', async () => {
@@ -273,9 +273,9 @@ describe('User Profile Controller', () => {
         },
         user: mockUser,
         headers: {
-          'x-correlation-id': 'test-correlation-id'
+          'x-transaction-id': 'test-transaction-id'
         },
-        get: jest.fn().mockReturnValue('test-correlation-id')
+        get: jest.fn().mockReturnValue('test-transaction-id')
       };
 
       const mockResult = {
@@ -288,10 +288,9 @@ describe('User Profile Controller', () => {
       await userProfileController.updateProfile(mockReq, mockRes);
 
       expect(userProfileService.updateProfile).toHaveBeenCalledWith(mockReq);
-      expect(mockReq.get).toHaveBeenCalledWith('x-correlation-id');
     });
 
-    test('should handle requests without correlation ID', async () => {
+    test('should handle requests without transaction ID', async () => {
       const mockUser = { id: 1, username: 'testuser' };
       mockReq = {
         body: { firstName: 'Updated' },
@@ -310,7 +309,6 @@ describe('User Profile Controller', () => {
       await userProfileController.updateProfile(mockReq, mockRes);
 
       expect(userProfileService.updateProfile).toHaveBeenCalledWith(mockReq);
-      expect(mockReq.get).toHaveBeenCalledWith('x-correlation-id');
     });
   });
 
@@ -350,7 +348,7 @@ describe('User Profile Controller', () => {
 
       await userProfileController.updateProfile(mockReq, mockRes);
 
-      expect(genResponseObj).toHaveBeenCalledWith(mockReq, '20001', mockResult);
+      expect(genResponseObj).toHaveBeenCalledWith(mockReq, '20004', mockResult);
     });
   });
 

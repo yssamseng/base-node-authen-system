@@ -1,10 +1,10 @@
-import { response, responseError } from '../core/handler.js';
+import { response, responseError, genResponseObj } from '../core/handler.js';
 import {
-  resendVerificationEmail,
-  verifyEmail,
-  requestPasswordReset,
-  resetPassword,
-  checkVerificationStatus
+  resendVerificationEmail as serviceResendVerificationEmail,
+  verifyEmail as serviceVerifyEmail,
+  requestPasswordReset as serviceRequestPasswordReset,
+  resetPassword as serviceResetPassword,
+  checkVerificationStatus as serviceCheckVerificationStatus
 } from '../services/email-verification.service.js';
 
 /**
@@ -14,10 +14,10 @@ import {
  * @param {Function} next - Express next function
  * @returns {Promise<void>}
  */
-const resendVerification = async (req, res, next) => {
+const resendVerificationEmail = async (req, res, next) => {
   try {
-    const result = await resendVerificationEmail(req);
-    response(req, res, result, 'VE001');
+    const result = await serviceResendVerificationEmail(req);
+    response(req, res, genResponseObj(req, '20009', result));
   } catch (error) {
     responseError(req, res, error);
   }
@@ -30,10 +30,10 @@ const resendVerification = async (req, res, next) => {
  * @param {Function} next - Express next function
  * @returns {Promise<void>}
  */
-const confirmVerification = async (req, res, next) => {
+const verifyEmail = async (req, res, next) => {
   try {
-    const result = await verifyEmail(req);
-    response(req, res, result, 'VE002');
+    const result = await serviceVerifyEmail(req);
+    response(req, res, genResponseObj(req, '20010', result));
   } catch (error) {
     responseError(req, res, error);
   }
@@ -46,10 +46,10 @@ const confirmVerification = async (req, res, next) => {
  * @param {Function} next - Express next function
  * @returns {Promise<void>}
  */
-const requestPasswordResetLink = async (req, res, next) => {
+const requestPasswordReset = async (req, res, next) => {
   try {
-    const result = await requestPasswordReset(req);
-    response(req, res, result, 'VE003');
+    const result = await serviceRequestPasswordReset(req);
+    response(req, res, genResponseObj(req, '20011', result));
   } catch (error) {
     responseError(req, res, error);
   }
@@ -62,10 +62,10 @@ const requestPasswordResetLink = async (req, res, next) => {
  * @param {Function} next - Express next function
  * @returns {Promise<void>}
  */
-const confirmPasswordReset = async (req, res, next) => {
+const resetPassword = async (req, res, next) => {
   try {
-    const result = await resetPassword(req);
-    response(req, res, result, 'VE004');
+    const result = await serviceResetPassword(req);
+    response(req, res, genResponseObj(req, '20012', result));
   } catch (error) {
     responseError(req, res, error);
   }
@@ -78,19 +78,19 @@ const confirmPasswordReset = async (req, res, next) => {
  * @param {Function} next - Express next function
  * @returns {Promise<void>}
  */
-const getVerificationStatus = async (req, res, next) => {
+const checkVerificationStatus = async (req, res, next) => {
   try {
-    const result = await checkVerificationStatus(req);
-    response(req, res, result, 'VE005');
+    const result = await serviceCheckVerificationStatus(req);
+    response(req, res, genResponseObj(req, '20013', result));
   } catch (error) {
     responseError(req, res, error);
   }
 };
 
 export {
-  resendVerification,
-  confirmVerification,
-  requestPasswordResetLink,
-  confirmPasswordReset,
-  getVerificationStatus
+  resendVerificationEmail,
+  verifyEmail,
+  requestPasswordReset,
+  resetPassword,
+  checkVerificationStatus
 };

@@ -6,10 +6,10 @@ import moment from 'moment';
 // Mock dependencies
 jest.mock('../../../src/core/handler.js');
 jest.mock('../../../src/utils/db.util.js');
-jest.mock('../../../src/models/index.js');
+jest.mock('../../../src/models/model.js');
 
 import { findOne, update } from '../../../src/utils/db.util.js';
-import models from '../../../src/models/index.js';
+import models from '../../../src/models/model.js';
 const { User } = models;
 
 describe('User Profile Service', () => {

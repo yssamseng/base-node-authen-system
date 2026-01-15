@@ -5,7 +5,7 @@ import * as authService from '../../../src/services/auth.service.js';
 // Mock dependencies
 jest.mock('../../../src/services/auth.service.js');
 jest.mock('../../../src/config/database.js');
-jest.mock('../../../src/core/app-logger.js');
+jest.mock('../../../src/utils/app-logger.util.js');
 jest.mock('../../../src/core/handler.js');
 
 import { sequelize } from '../../../src/config/database.js';
@@ -176,118 +176,6 @@ describe('Auth Controller', () => {
     });
   });
 
-  describe('getProfile', () => {
-    test('should get user profile successfully', async () => {
-      const mockUser = { id: 1, username: 'testuser' };
-      mockReq.user = mockUser;
-
-      const mockResult = {
-        user: mockUser,
-        lastLogin: '2023-12-01 12:00:00',
-        memberSince: '2023-11-01',
-        isVerified: false
-      };
-
-      authService.getProfile.mockResolvedValue(mockResult);
-
-      await authController.getProfile(mockReq, mockRes);
-
-      expect(authService.getProfile).toHaveBeenCalledWith(mockReq);
-      expect(response).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
-      expect(responseError).not.toHaveBeenCalled();
-    });
-
-    test('should handle profile retrieval errors', async () => {
-      const mockUser = { id: 1, username: 'testuser' };
-      mockReq.user = mockUser;
-
-      const mockError = new Error('User not found');
-      mockError.resCode = '40403';
-
-      authService.getProfile.mockRejectedValue(mockError);
-
-      await authController.getProfile(mockReq, mockRes);
-
-      expect(authService.getProfile).toHaveBeenCalledWith(mockReq);
-      expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, mockError);
-      expect(response).not.toHaveBeenCalled();
-    });
-
-    test('should handle case where user is not attached to request', async () => {
-      mockReq.user = null;
-
-      await authController.getProfile(mockReq, mockRes);
-
-      expect(authService.getProfile).toHaveBeenCalled();
-      // Service should handle the null user case
-    });
-  });
-
-  describe('updateProfile', () => {
-    test('should update user profile successfully', async () => {
-      const mockUser = { id: 1, username: 'testuser' };
-      mockReq.user = mockUser;
-      mockReq.body = {
-        firstName: 'Updated',
-        lastName: 'Name'
-      };
-
-      const mockResult = {
-        user: { ...mockUser, firstName: 'Updated', lastName: 'Name' },
-        updatedAt: '2023-12-01 12:00:00'
-      };
-
-      authService.updateProfile.mockResolvedValue(mockResult);
-
-      await authController.updateProfile(mockReq, mockRes);
-
-      expect(authService.updateProfile).toHaveBeenCalledWith(mockReq);
-      expect(response).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
-      expect(responseError).not.toHaveBeenCalled();
-    });
-
-    test('should handle partial profile updates', async () => {
-      const mockUser = { id: 1, username: 'testuser' };
-      mockReq.user = mockUser;
-      mockReq.body = {
-        firstName: 'Updated'
-        // lastName is not provided
-      };
-
-      const mockResult = {
-        user: { ...mockUser, firstName: 'Updated' },
-        updatedAt: '2023-12-01 12:00:00'
-      };
-
-      authService.updateProfile.mockResolvedValue(mockResult);
-
-      await authController.updateProfile(mockReq, mockRes);
-
-      expect(authService.updateProfile).toHaveBeenCalledWith(mockReq);
-      expect(response).toHaveBeenCalled();
-    });
-
-    test('should handle profile update errors', async () => {
-      const mockUser = { id: 1, username: 'testuser' };
-      mockReq.user = mockUser;
-      mockReq.body = {
-        firstName: 'Updated',
-        lastName: 'Name'
-      };
-
-      const mockError = new Error('Update failed');
-      mockError.resCode = '50000';
-
-      authService.updateProfile.mockRejectedValue(mockError);
-
-      await authController.updateProfile(mockReq, mockRes);
-
-      expect(authService.updateProfile).toHaveBeenCalledWith(mockReq);
-      expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, mockError);
-      expect(response).not.toHaveBeenCalled();
-    });
-  });
-
   describe('logout', () => {
     test('should logout user successfully', async () => {
       const mockUser = { id: 1, username: 'testuser' };
@@ -301,7 +189,7 @@ describe('Auth Controller', () => {
 
       await authController.logout(mockReq, mockRes);
 
-      expect(authService.logout).toHaveBeenCalledWith();
+      expect(authService.logout).toHaveBeenCalledWith(mockReq);
       expect(response).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(responseError).not.toHaveBeenCalled();
     });
@@ -317,7 +205,7 @@ describe('Auth Controller', () => {
 
       await authController.logout(mockReq, mockRes);
 
-      expect(authService.logout).toHaveBeenCalledWith();
+      expect(authService.logout).toHaveBeenCalledWith(mockReq);
       expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, mockError);
       expect(response).not.toHaveBeenCalled();
     });
@@ -333,30 +221,12 @@ describe('Auth Controller', () => {
 
       await authController.logout(mockReq, mockRes);
 
-      expect(authService.logout).toHaveBeenCalledWith();
+      expect(authService.logout).toHaveBeenCalledWith(mockReq);
       expect(response).toHaveBeenCalled();
     });
   });
 
   describe('Response Generation', () => {
-    test('should generate correct response object for successful operations', async () => {
-      const mockUser = { id: 1, username: 'testuser' };
-      mockReq.user = mockUser;
-
-      const mockResult = {
-        user: mockUser,
-        lastLogin: '2023-12-01 12:00:00',
-        memberSince: '2023-11-01',
-        isVerified: false
-      };
-
-      authService.getProfile.mockResolvedValue(mockResult);
-
-      await authController.getProfile(mockReq, mockRes);
-
-      expect(genResponseObj).toHaveBeenCalledWith(mockReq, '20000', mockResult);
-    });
-
     test('should generate correct response object for login', async () => {
       mockReq.body = {
         email: 'test@example.com',

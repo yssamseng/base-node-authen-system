@@ -248,6 +248,10 @@ const resetPassword = async (req) => {
  * Check email verification status
  */
 const checkVerificationStatus = async (req) => {
+  if (!req.user) {
+    throw genErrorResponseObj(req, '40403', 'User not found');
+  }
+
   const userId = req.user.id;
 
   const userAuth = await UserAuth.findOne({

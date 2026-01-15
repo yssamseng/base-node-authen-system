@@ -1,4 +1,4 @@
-import { describe, test, expect, jest, beforeEach, afterEach } from '@jest/globals';
+import { describe, test, expect, jest, beforeEach } from '@jest/globals';
 import * as emailVerificationService from '../../../src/services/email-verification.service.js';
 import { genErrorResponseObj } from '../../../src/core/handler.js';
 import moment from 'moment';
@@ -6,15 +6,22 @@ import moment from 'moment';
 // Mock dependencies
 jest.mock('../../../src/core/handler.js');
 jest.mock('../../../src/utils/db.util.js');
-jest.mock('../../../src/models/index.js');
+jest.mock('../../../src/models/model.js');
+
+// Mock EmailSendingService as a default export
+jest.mock('../../../src/services/email-sending.service.js', () => ({
+  __esModule: true,
+  default: {
+    sendVerificationEmail: jest.fn(),
+    sendPasswordResetEmail: jest.fn(),
+    getProviderInfo: jest.fn()
+  }
+}));
 
 import { findOne, update } from '../../../src/utils/db.util.js';
-import models from '../../../src/models/index.js';
+import models from '../../../src/models/model.js';
+import EmailSendingService from '../../../src/services/email-sending.service.js';
 const { User, UserAuth } = models;
-
-// Mock email utility functions
-const sendVerificationEmail = jest.fn();
-const sendPasswordResetEmail = jest.fn();
 
 describe('Email Verification Service', () => {
   let mockReq;
@@ -43,27 +50,28 @@ describe('Email Verification Service', () => {
     User.findByPk = jest.fn();
     UserAuth.findOne = jest.fn();
     UserAuth.update = jest.fn();
-
-    // Mock email utility functions (simulated since they don't exist)
-    const mockSendEmail = jest.fn().mockResolvedValue(true);
   });
 
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
-
-  describe('resendVerification', () => {
+  describe('resendVerificationEmail', () => {
     test('should resend verification email successfully for unverified user', async () => {
       const mockUser = {
         id: 1,
         email: 'test@example.com',
-        isActive: true
+        isActive: true,
+        auth: {
+          userId: 1,
+          isVerified: false,
+          emailVerificationToken: null,
+          emailVerificationExpiresAt: null,
+          save: jest.fn().mockResolvedValue()
+        }
       };
       const mockUserAuth = {
         userId: 1,
         isVerified: false,
         emailVerificationToken: null,
-        emailVerificationExpiresAt: null
+        emailVerificationExpiresAt: null,
+        save: jest.fn().mockResolvedValue()
       };
 
       mockReq.body = { email: 'test@example.com' };
@@ -71,7 +79,7 @@ describe('Email Verification Service', () => {
       UserAuth.findOne.mockResolvedValue(mockUserAuth);
       update.mockResolvedValue(mockUserAuth);
 
-      const result = await emailVerificationService.resendVerification(mockReq);
+      const result = await emailVerificationService.resendVerificationEmail(mockReq);
 
       expect(User.findOne).toHaveBeenCalledWith({
         where: { email: 'test@example.com' },
@@ -80,11 +88,11 @@ describe('Email Verification Service', () => {
           as: 'auth'
         }]
       });
-      expect(update).toHaveBeenCalled();
+      expect(mockUser.auth.save).toHaveBeenCalled();
       // Email would be sent here in real implementation
       expect(result).toEqual({
-        message: 'Verification email sent',
-        expiresIn: 3600
+        message: 'Verification email sent successfully. Please check your inbox.',
+        expiresIn: expect.any(Number)
       });
     });
 
@@ -92,7 +100,7 @@ describe('Email Verification Service', () => {
       mockReq.body = { email: 'nonexistent@example.com' };
       User.findOne.mockResolvedValue(null);
 
-      await expect(emailVerificationService.resendVerification(mockReq)).rejects.toThrow('User not found');
+      await expect(emailVerificationService.resendVerificationEmail(mockReq)).rejects.toThrow('User not found');
       expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40403', 'User not found');
     });
 
@@ -109,7 +117,7 @@ describe('Email Verification Service', () => {
       mockReq.body = { email: 'test@example.com' };
       User.findOne.mockResolvedValue(mockUser);
 
-      await expect(emailVerificationService.resendVerification(mockReq)).rejects.toThrow('Email is already verified');
+      await expect(emailVerificationService.resendVerificationEmail(mockReq)).rejects.toThrow('Email is already verified');
       expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40010', 'Email is already verified');
     });
 
@@ -123,8 +131,8 @@ describe('Email Verification Service', () => {
       mockReq.body = { email: 'test@example.com' };
       User.findOne.mockResolvedValue(mockUser);
 
-      await expect(emailVerificationService.resendVerification(mockReq)).rejects.toThrow('User account is inactive');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40004', 'User account is inactive');
+      await expect(emailVerificationService.resendVerificationEmail(mockReq)).rejects.toThrow('Account is deactivated');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40004', 'Account is deactivated');
     });
 
     test('should throw error if auth record not found', async () => {
@@ -138,7 +146,7 @@ describe('Email Verification Service', () => {
       mockReq.body = { email: 'test@example.com' };
       User.findOne.mockResolvedValue(mockUser);
 
-      await expect(emailVerificationService.resendVerification(mockReq)).rejects.toThrow('Authentication data not found');
+      await expect(emailVerificationService.resendVerificationEmail(mockReq)).rejects.toThrow('Authentication data not found');
       expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40008', 'Authentication data not found');
     });
 
@@ -146,60 +154,62 @@ describe('Email Verification Service', () => {
       const mockUser = {
         id: 1,
         email: 'test@example.com',
-        isActive: true
-      };
-      const mockUserAuth = {
-        userId: 1,
-        isVerified: false,
-        emailVerificationToken: null,
-        emailVerificationExpiresAt: null
+        isActive: true,
+        username: 'testuser',
+        auth: {
+          userId: 1,
+          isVerified: false,
+          emailVerificationToken: null,
+          emailVerificationExpiresAt: null,
+          save: jest.fn().mockResolvedValue()
+        }
       };
 
       mockReq.body = { email: 'test@example.com' };
       User.findOne.mockResolvedValue(mockUser);
-      UserAuth.findOne.mockResolvedValue(mockUserAuth);
-      update.mockResolvedValue(mockUserAuth);
-      // Mock email service failure
+      UserAuth.findOne.mockResolvedValue(mockUser.auth);
 
-      await expect(emailVerificationService.resendVerification(mockReq)).rejects.toThrow('Email service failed');
+      // Mock EmailSendingService.sendVerificationEmail to throw an error
+      EmailSendingService.sendVerificationEmail.mockRejectedValue(new Error('Email service failed'));
+
+      // The service should throw an error when email sending fails
+      await expect(emailVerificationService.resendVerificationEmail(mockReq)).rejects.toThrow('Failed to send verification email');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '50001', 'Failed to send verification email');
     });
   });
 
-  describe('confirmVerification', () => {
+  describe('verifyEmail', () => {
     test('should confirm email verification successfully', async () => {
       const mockUserAuth = {
         userId: 1,
         emailVerificationToken: 'valid_token',
         emailVerificationExpiresAt: moment().add(1, 'hour').toDate(),
-        isVerified: false
+        isVerified: false,
+        isEmailVerificationExpired: jest.fn().mockReturnValue(false),
+        markEmailAsVerified: jest.fn().mockResolvedValue(),
+        user: { email: 'test@example.com' }
       };
 
       mockReq.body = { token: 'valid_token' };
       UserAuth.findOne.mockResolvedValue(mockUserAuth);
       update.mockResolvedValue({ ...mockUserAuth, isVerified: true });
 
-      const result = await emailVerificationService.confirmVerification(mockReq);
+      const result = await emailVerificationService.verifyEmail(mockReq);
 
       expect(UserAuth.findOne).toHaveBeenCalledWith({
         where: {
-          emailVerificationToken: 'valid_token',
-          isVerified: false
-        }
-      });
-      expect(update).toHaveBeenCalledWith(UserAuth, {
-        data: {
-          isVerified: true,
-          emailVerificationToken: null,
-          emailVerificationExpiresAt: null
+          emailVerificationToken: 'valid_token'
         },
-        criteria: {
-          emailVerificationToken: 'valid_token',
-          isVerified: false
-        }
+        include: [{
+          model: User,
+          as: 'user'
+        }]
       });
+      expect(mockUserAuth.markEmailAsVerified).toHaveBeenCalled();
       expect(result).toEqual({
         message: 'Email verified successfully',
-        isVerified: true
+        email: 'test@example.com',
+        verifiedAt: expect.any(String)
       });
     });
 
@@ -207,8 +217,8 @@ describe('Email Verification Service', () => {
       mockReq.body = { token: 'invalid_token' };
       UserAuth.findOne.mockResolvedValue(null);
 
-      await expect(emailVerificationService.confirmVerification(mockReq)).rejects.toThrow('Invalid or expired verification token');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40011', 'Invalid or expired verification token');
+      await expect(emailVerificationService.verifyEmail(mockReq)).rejects.toThrow('Invalid or expired verification token');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40013', 'Invalid or expired verification token');
     });
 
     test('should throw error if token is expired', async () => {
@@ -216,14 +226,15 @@ describe('Email Verification Service', () => {
         userId: 1,
         emailVerificationToken: 'expired_token',
         emailVerificationExpiresAt: moment().subtract(1, 'hour').toDate(),
-        isVerified: false
+        isVerified: false,
+        isEmailVerificationExpired: jest.fn().mockReturnValue(true)
       };
 
       mockReq.body = { token: 'expired_token' };
       UserAuth.findOne.mockResolvedValue(mockUserAuth);
 
-      await expect(emailVerificationService.confirmVerification(mockReq)).rejects.toThrow('Invalid or expired verification token');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40011', 'Invalid or expired verification token');
+      await expect(emailVerificationService.verifyEmail(mockReq)).rejects.toThrow('Verification token has expired. Please request a new one');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40014', 'Verification token has expired. Please request a new one');
     });
 
     test('should throw error if user is already verified', async () => {
@@ -231,14 +242,15 @@ describe('Email Verification Service', () => {
         userId: 1,
         emailVerificationToken: 'valid_token',
         emailVerificationExpiresAt: moment().add(1, 'hour').toDate(),
-        isVerified: true
+        isVerified: true,
+        isEmailVerificationExpired: jest.fn().mockReturnValue(false)
       };
 
       mockReq.body = { token: 'valid_token' };
       UserAuth.findOne.mockResolvedValue(mockUserAuth);
 
-      await expect(emailVerificationService.confirmVerification(mockReq)).rejects.toThrow('Email is already verified');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40010', 'Email is already verified');
+      await expect(emailVerificationService.verifyEmail(mockReq)).rejects.toThrow('Email is already verified');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40015', 'Email is already verified');
     });
   });
 
@@ -247,13 +259,20 @@ describe('Email Verification Service', () => {
       const mockUser = {
         id: 1,
         email: 'test@example.com',
-        isActive: true
+        isActive: true,
+        username: 'testuser',
+        firstName: 'Test',
+        lastName: 'User',
+        auth: {
+          userId: 1,
+          passwordResetToken: null,
+          passwordResetExpiresAt: null,
+          save: jest.fn().mockResolvedValue()
+        }
       };
 
       mockReq.body = { email: 'test@example.com' };
       User.findOne.mockResolvedValue(mockUser);
-      UserAuth.findOne.mockResolvedValue({ userId: 1 });
-      update.mockResolvedValue({});
 
       const result = await emailVerificationService.requestPasswordReset(mockReq);
 
@@ -264,11 +283,11 @@ describe('Email Verification Service', () => {
           as: 'auth'
         }]
       });
-      expect(update).toHaveBeenCalled();
+      expect(mockUser.auth.save).toHaveBeenCalled();
       // Email would be sent here in real implementation
       expect(result).toEqual({
         message: 'If an account with this email exists, a password reset link has been sent',
-        expiresIn: 3600
+        expiresIn: expect.any(Number)
       });
     });
 
@@ -319,12 +338,15 @@ describe('Email Verification Service', () => {
     });
   });
 
-  describe('confirmPasswordReset', () => {
+  describe('resetPassword', () => {
     test('should confirm password reset successfully', async () => {
       const mockUserAuth = {
         userId: 1,
         passwordResetToken: 'valid_reset_token',
-        passwordResetExpiresAt: moment().add(1, 'hour').toDate()
+        passwordResetExpiresAt: moment().add(1, 'hour').toDate(),
+        isPasswordResetExpired: jest.fn().mockReturnValue(false),
+        user: { email: 'test@example.com' },
+        save: jest.fn().mockResolvedValue()
       };
 
       mockReq.body = {
@@ -332,29 +354,22 @@ describe('Email Verification Service', () => {
         newPassword: 'newPassword123'
       };
       UserAuth.findOne.mockResolvedValue(mockUserAuth);
-      update.mockResolvedValue({});
 
-      const result = await emailVerificationService.confirmPasswordReset(mockReq);
+      const result = await emailVerificationService.resetPassword(mockReq);
 
       expect(UserAuth.findOne).toHaveBeenCalledWith({
         where: {
           passwordResetToken: 'valid_reset_token'
-        }
-      });
-      expect(update).toHaveBeenCalledWith(UserAuth, {
-        data: {
-          password: 'newPassword123',
-          passwordResetToken: null,
-          passwordResetExpiresAt: null,
-          failedAttempts: 0,
-          lockedUntil: null
         },
-        criteria: {
-          passwordResetToken: 'valid_reset_token'
-        }
+        include: [{
+          model: User,
+          as: 'user'
+        }]
       });
       expect(result).toEqual({
-        message: 'Password reset successfully'
+        message: 'Password reset successfully',
+        email: 'test@example.com',
+        resetAt: expect.any(String)
       });
     });
 
@@ -365,15 +380,17 @@ describe('Email Verification Service', () => {
       };
       UserAuth.findOne.mockResolvedValue(null);
 
-      await expect(emailVerificationService.confirmPasswordReset(mockReq)).rejects.toThrow('Invalid or expired reset token');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40012', 'Invalid or expired reset token');
+      await expect(emailVerificationService.resetPassword(mockReq)).rejects.toThrow('Invalid or expired reset token');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40017', 'Invalid or expired reset token');
     });
 
     test('should throw error if reset token is expired', async () => {
       const mockUserAuth = {
         userId: 1,
         passwordResetToken: 'expired_token',
-        passwordResetExpiresAt: moment().subtract(1, 'hour').toDate()
+        passwordResetExpiresAt: moment().subtract(1, 'hour').toDate(),
+        isPasswordResetExpired: jest.fn().mockReturnValue(true),
+        user: { email: 'test@example.com' }
       };
 
       mockReq.body = {
@@ -382,136 +399,124 @@ describe('Email Verification Service', () => {
       };
       UserAuth.findOne.mockResolvedValue(mockUserAuth);
 
-      await expect(emailVerificationService.confirmPasswordReset(mockReq)).rejects.toThrow('Invalid or expired reset token');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40012', 'Invalid or expired reset token');
+      await expect(emailVerificationService.resetPassword(mockReq)).rejects.toThrow('Password reset token has expired. Please request a new one');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40018', 'Password reset token has expired. Please request a new one');
     });
   });
 
-  describe('getVerificationStatus', () => {
+  describe('checkVerificationStatus', () => {
     test('should get verification status successfully', async () => {
-      const mockUser = {
-        id: 1,
-        email: 'test@example.com',
-        createdAt: moment('2023-11-01').toDate(),
-        toJSON: jest.fn().mockReturnValue({
-          id: 1,
+      const mockUserAuth = {
+        userId: 1,
+        isVerified: true,
+        emailVerificationExpiresAt: null,
+        user: {
           email: 'test@example.com',
-          createdAt: moment('2023-11-01').toDate()
-        }),
-        auth: {
-          isVerified: true,
-          lastLogin: moment('2023-12-01 12:00:00').toDate()
+          username: 'testuser'
         }
       };
 
       mockReq.user = { id: 1 };
-      findOne.mockResolvedValue(mockUser);
+      UserAuth.findOne.mockResolvedValue(mockUserAuth);
 
-      const result = await emailVerificationService.getVerificationStatus(mockReq);
+      const result = await emailVerificationService.checkVerificationStatus(mockReq);
 
-      expect(findOne).toHaveBeenCalledWith(User, {
-        pk: 1,
+      expect(UserAuth.findOne).toHaveBeenCalledWith({
+        where: { userId: 1 },
         include: [{
-          model: UserAuth,
-          as: 'auth',
-          attributes: ['isVerified', 'lastLogin', 'emailVerificationExpiresAt']
+          model: User,
+          as: 'user',
+          attributes: ['email', 'username']
         }]
       });
       expect(result).toEqual({
-        isVerified: true,
         email: 'test@example.com',
-        verificationExpiresAt: null,
-        lastLogin: expect.stringMatching(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/),
-        memberSince: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)
+        isVerified: true,
+        emailVerificationEnabled: false,
+        loginVerificationRequired: false
       });
     });
 
     test('should throw error if user not found', async () => {
       mockReq.user = { id: 1 };
-      findOne.mockResolvedValue(null);
+      UserAuth.findOne.mockResolvedValue(null);
 
-      await expect(emailVerificationService.getVerificationStatus(mockReq)).rejects.toThrow('User not found');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40403', 'User not found');
+      await expect(emailVerificationService.checkVerificationStatus(mockReq)).rejects.toThrow('Authentication data not found');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40008', 'Authentication data not found');
     });
 
     test('should handle unverified user with pending verification', async () => {
-      const mockUser = {
-        id: 1,
-        email: 'test@example.com',
-        createdAt: moment('2023-11-01').toDate(),
-        toJSON: jest.fn().mockReturnValue({
-          id: 1,
+      const mockUserAuth = {
+        userId: 1,
+        isVerified: false,
+        emailVerificationExpiresAt: moment().add(1, 'hour').toDate(),
+        user: {
           email: 'test@example.com',
-          createdAt: moment('2023-11-01').toDate()
-        }),
-        auth: {
-          isVerified: false,
-          emailVerificationExpiresAt: moment().add(1, 'hour').toDate(),
-          lastLogin: null
+          username: 'testuser'
         }
       };
 
       mockReq.user = { id: 1 };
-      findOne.mockResolvedValue(mockUser);
+      UserAuth.findOne.mockResolvedValue(mockUserAuth);
 
-      const result = await emailVerificationService.getVerificationStatus(mockReq);
+      const result = await emailVerificationService.checkVerificationStatus(mockReq);
 
       expect(result).toEqual({
-        isVerified: false,
         email: 'test@example.com',
-        verificationExpiresAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/),
-        lastLogin: null,
-        memberSince: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)
+        isVerified: false,
+        emailVerificationEnabled: false,
+        loginVerificationRequired: false,
+        verificationExpiresAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)
       });
     });
 
     test('should handle case where user is not attached to request', async () => {
       mockReq.user = null;
 
-      await expect(emailVerificationService.getVerificationStatus(mockReq)).rejects.toThrow('User not found');
+      await expect(emailVerificationService.checkVerificationStatus(mockReq)).rejects.toThrow('User not found');
       expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40403', 'User not found');
     });
   });
 
   describe('Edge Cases', () => {
-    test('should handle invalid email format in resendVerification', async () => {
+    test('should handle invalid email format in resendVerificationEmail', async () => {
       mockReq.body = { email: 'invalid-email' };
 
-      await expect(emailVerificationService.resendVerification(mockReq)).rejects.toThrow();
+      await expect(emailVerificationService.resendVerificationEmail(mockReq)).rejects.toThrow();
     });
 
     test('should handle missing email in request body', async () => {
       mockReq.body = {};
 
-      await expect(emailVerificationService.resendVerification(mockReq)).rejects.toThrow();
+      await expect(emailVerificationService.resendVerificationEmail(mockReq)).rejects.toThrow();
     });
 
-    test('should handle missing token in confirmVerification', async () => {
+    test('should handle missing token in verifyEmail', async () => {
       mockReq.body = {};
 
-      await expect(emailVerificationService.confirmVerification(mockReq)).rejects.toThrow();
+      await expect(emailVerificationService.verifyEmail(mockReq)).rejects.toThrow();
     });
 
-    test('should handle missing token and password in confirmPasswordReset', async () => {
+    test('should handle missing token and password in resetPassword', async () => {
       mockReq.body = {};
 
-      await expect(emailVerificationService.confirmPasswordReset(mockReq)).rejects.toThrow();
+      await expect(emailVerificationService.resetPassword(mockReq)).rejects.toThrow();
     });
 
-    test('should handle empty password in confirmPasswordReset', async () => {
+    test('should handle empty password in resetPassword', async () => {
       mockReq.body = {
         token: 'valid_token',
         newPassword: ''
       };
 
-      await expect(emailVerificationService.confirmPasswordReset(mockReq)).rejects.toThrow();
+      await expect(emailVerificationService.resetPassword(mockReq)).rejects.toThrow();
     });
 
     test('should handle database errors gracefully', async () => {
       mockReq.body = { email: 'test@example.com' };
       User.findOne.mockRejectedValue(new Error('Database connection failed'));
 
-      await expect(emailVerificationService.resendVerification(mockReq)).rejects.toThrow('Database connection failed');
+      await expect(emailVerificationService.resendVerificationEmail(mockReq)).rejects.toThrow('Database connection failed');
     });
   });
 });
