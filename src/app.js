@@ -1,38 +1,117 @@
 import express from 'express';
+import helmet from 'helmet';
 import cors from 'cors';
-import { appLogger } from './utils/app-logger.util.js';
 import moment from 'moment';
 import APP_CONFIG from './config/app-config.js';
+import { appLogger } from './utils/app-logger.util.js';
+import routes from './routes/routes.js';
 
 const app = express();
 
-// Middleware
+// ============================================
+// 1. SECURITY MIDDLEWARE (First Priority)
+// ============================================
+
+// Security headers - must be FIRST to protect all routes
+app.use(helmet({
+  // Content Security Policy - restricts sources of content
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  // HTTP Strict Transport Security - enforce HTTPS in production
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true
+  },
+  // Prevent MIME type sniffing
+  noSniff: true,
+  // Prevent clickjacking
+  frameguard: { action: 'deny' },
+  // XSS Protection
+  xssFilter: true,
+  // Referrer Policy
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  // Permissions-Policy (formerly Feature-Policy)
+  permissionsPolicy: {
+    features: {
+      geolocation: ["'none'"],
+      microphone: ["'none'"],
+      camera: ["'none'"],
+    }
+  }
+}));
+
+// CORS - Cross-Origin Resource Sharing
+// Supports multiple origins (comma-separated in CORS_ORIGIN env var)
 app.use(cors({
-  origin: APP_CONFIG.cors.origin,
+  origin: function (origin, callback) {
+    const allowedOrigins = APP_CONFIG.cors.origins;
+
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    // Check if origin is in allowed list
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS not allowed for origin: ' + origin));
+    }
+  },
   credentials: true
 }));
+
+// ============================================
+// 2. BODY PARSING MIDDLEWARE
+// ============================================
+
+// Parse JSON request bodies
 app.use(express.json());
+// Parse URL-encoded request bodies
 app.use(express.urlencoded({ extended: true }));
 
-// Timing middleware
+// ============================================
+// 3. CUSTOM MIDDLEWARE
+// ============================================
+
+// Timing middleware - MUST come before routes, after body parsing
 app.use((req, res, next) => {
   const startTime = process.hrtime.bigint();
   req.startTime = startTime;
   next();
 });
 
-// Request logging middleware
+// Request logging middleware - logs incoming requests
 app.use((req, res, next) => {
   console.log(`${moment().toISOString()} - ${req.method} ${req.path}`);
   appLogger.logRequestReceived(req);
   next();
 });
 
-// Routes
-import routes from './routes/routes.js';
+// ============================================
+// 4. ROUTES
+// ============================================
+
+// API routes
 app.use('/api', routes);
 
-// 404 handler
+// ============================================
+// 5. ERROR HANDLING (Last Priority)
+// ============================================
+
+// 404 handler - must be before error handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -40,7 +119,7 @@ app.use((req, res) => {
   });
 });
 
-// Error handling middleware
+// Global error handling middleware - MUST be LAST
 app.use((err, req, res, next) => {
   console.error('Error:', err);
   res.status(err.status || 500).json({

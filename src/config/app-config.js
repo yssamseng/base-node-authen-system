@@ -35,12 +35,16 @@ const APP_CONFIG = {
     secret: process.env.JWT_SECRET || "",
     expire: process.env.JWT_EXPIRE || "24h",
     accessExpire: process.env.JWT_ACCESS_EXPIRE || "15m",
-    refreshSecret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || "",
+    refreshSecret: process.env.JWT_REFRESH_SECRET || null,
     refreshExpire: process.env.JWT_REFRESH_EXPIRE || "7d",
   },
 
   cors: {
+    // Support multiple origins (comma-separated or array)
+    // Examples: "http://localhost:3000" or "http://localhost:3000,https://example.com"
     origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+    // Parse origins into array for validation
+    origins: (process.env.CORS_ORIGIN || "http://localhost:3000").split(',').map(o => o.trim()),
   },
 
   email: {

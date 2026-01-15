@@ -1,14 +1,24 @@
 import Joi from 'joi';
 import {validateBody} from './validator.js'
 
+// Password complexity pattern:
+// - At least 8 characters
+// - At least one uppercase letter
+// - At least one lowercase letter
+// - At least one number
+// - At least one special character
+const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
+
 const registrationSchema = Joi.object({
   username: Joi.string()
     .min(3)
     .max(50)
+    .pattern(/^[a-zA-Z0-9_]+$/)  // Only alphanumeric and underscore
     .required()
     .messages({
       'string.min': 'Username must be at least 3 characters long',
       'string.max': 'Username must not exceed 50 characters',
+      'string.pattern.base': 'Username can only contain letters, numbers, and underscores',
       'any.required': 'Username is required'
     }),
   email: Joi.string()
@@ -19,10 +29,12 @@ const registrationSchema = Joi.object({
       'any.required': 'Email is required'
     }),
   password: Joi.string()
-    .min(6)
+    .min(8)
+    .pattern(passwordPattern)
     .required()
     .messages({
-      'string.min': 'Password must be at least 6 characters long',
+      'string.min': 'Password must be at least 8 characters long',
+      'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&#)',
       'any.required': 'Password is required'
     }),
   firstName: Joi.string()
@@ -69,11 +81,15 @@ const changePasswordSchema = Joi.object({
       'any.required': 'Current password is required'
     }),
   newPassword: Joi.string()
-    .min(6)
+    .min(8)
+    .pattern(passwordPattern)
+    .invalid(Joi.ref('currentPassword'))  // Cannot be same as current
     .required()
     .messages({
       'string.empty': 'New password is required',
-      'string.min': 'New password must be at least 6 characters long',
+      'string.min': 'New password must be at least 8 characters long',
+      'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&#)',
+      'any.invalid': 'New password must be different from current password',
       'any.required': 'New password is required'
     })
 });

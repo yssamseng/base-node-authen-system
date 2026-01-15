@@ -225,8 +225,6 @@ const changePassword = async (req) => {
 const refreshToken = async (req) => {
   const { refreshToken } = req.body;
 
-  console.log('refreshToken called with token:', refreshToken);
-
   if (!refreshToken) {
     throw genErrorResponseObj(req, '40006', 'Refresh token is required');
   }

@@ -95,7 +95,7 @@ UserAuth.init({
     allowNull: false,
     validate: {
       notEmpty: true,
-      len: [6, 255]
+      len: [8, 255]
     }
   },
   lastLogin: {

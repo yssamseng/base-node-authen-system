@@ -4,6 +4,30 @@ import APP_CONFIG from '../config/app-config.js';
 
 const { secret, accessExpire, refreshSecret, refreshExpire } = APP_CONFIG.jwt;
 
+// Security: Ensure JWT secrets are properly configured
+if (!secret || secret === '' || secret.length < 32) {
+  throw new Error(
+    'JWT_SECRET must be set and at least 32 characters long. ' +
+    'Set a strong secret in your .env file: JWT_SECRET=your_very_long_random_secret_key_here'
+  );
+}
+
+// Security: Require separate refresh token secret (HIGH PRIORITY)
+if (!refreshSecret) {
+  throw new Error(
+    'JWT_REFRESH_SECRET must be set as a separate secret from JWT_SECRET. ' +
+    'This is a security requirement to prevent token type confusion attacks. ' +
+    'Add to your .env: JWT_REFRESH_SECRET=your_different_secret_key_here'
+  );
+}
+
+if (refreshSecret === secret) {
+  throw new Error(
+    'JWT_REFRESH_SECRET must be different from JWT_SECRET. ' +
+    'Using the same secret for both token types is a security vulnerability.'
+  );
+}
+
 const generateAccessToken = (userId) => {
   return jwt.sign(
     { id: userId, type: 'access' },
