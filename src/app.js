@@ -1,6 +1,7 @@
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
+import compression from 'compression';
 import moment from 'moment';
 import APP_CONFIG from './config/app-config.js';
 import { appLogger } from './utils/app-logger.util.js';
@@ -74,7 +75,26 @@ app.use(cors({
 }));
 
 // ============================================
-// 2. BODY PARSING MIDDLEWARE
+// 2. PERFORMANCE MIDDLEWARE
+// ============================================
+
+// Response compression - compress all responses
+// Skip compression for smaller responses (< 1KB) to avoid CPU overhead
+app.use(compression({
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      // Don't compress if client explicitly asks not to
+      return false;
+    }
+    // Compress all responses
+    return compression.filter(req, res);
+  },
+  threshold: 1024, // Only compress responses larger than 1KB
+  level: 6, // Compression level (0-9, 6 is default)
+}));
+
+// ============================================
+// 3. BODY PARSING MIDDLEWARE
 // ============================================
 
 // Parse JSON request bodies
@@ -83,36 +103,36 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ============================================
-// 3. CUSTOM MIDDLEWARE
+// 4. CUSTOM MIDDLEWARE
 // ============================================
 
 // Timing middleware - MUST come before routes, after body parsing
-app.use((req, res, next) => {
+app.use((req, _res, next) => {
   const startTime = process.hrtime.bigint();
   req.startTime = startTime;
   next();
 });
 
 // Request logging middleware - logs incoming requests
-app.use((req, res, next) => {
+app.use((req, _res, next) => {
   console.log(`${moment().toISOString()} - ${req.method} ${req.path}`);
   appLogger.logRequestReceived(req);
   next();
 });
 
 // ============================================
-// 4. ROUTES
+// 5. ROUTES
 // ============================================
 
 // API routes
 app.use('/api', routes);
 
 // ============================================
-// 5. ERROR HANDLING (Last Priority)
+// 6. ERROR HANDLING (Last Priority)
 // ============================================
 
 // 404 handler - must be before error handler
-app.use((req, res) => {
+app.use((_req, res) => {
   res.status(404).json({
     success: false,
     message: 'Route not found'
@@ -120,7 +140,7 @@ app.use((req, res) => {
 });
 
 // Global error handling middleware - MUST be LAST
-app.use((err, req, res, next) => {
+app.use((err, _req, res, _next) => {
   console.error('Error:', err);
   res.status(err.status || 500).json({
     success: false,

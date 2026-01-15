@@ -3,15 +3,10 @@ const router = express.Router();
 import authRoutes from './auth.route.js';
 import userRoutes from './user.route.js';
 import emailVerificationRoutes from './email-verification.route.js';
-import { appLogger } from '../utils/app-logger.util.js';
-import { response, genResponseObj } from '../core/handler.js';
+import { healthCheck } from '../controllers/health.controller.js';
 
-// Health check route
-router.get('/health', (req, res) => {
-  appLogger.logInfo('API IS RUNNING');
-  const result = { status: 'API is running'};
-  return response(req, res, genResponseObj(req, '20000', result));
-});
+// Health check route with database status
+router.get('/health', healthCheck);
 
 // Mount auth routes
 router.use('/auth', authRoutes);
