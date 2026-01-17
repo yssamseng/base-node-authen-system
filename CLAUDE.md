@@ -1,0 +1,193 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Development Commands
+
+```bash
+# Start development server (with nodemon)
+npm run dev
+
+# Start production server
+npm start
+
+# Run all tests with coverage
+npm test
+
+# Run specific test file
+npm test -- tests/unit/services/auth.service.test.js
+
+# Run tests matching pattern
+npm test -- --testNamePattern="should login user"
+
+# Database operations (requires migrations to be set up)
+npm run db:migrate
+npm run db:migrate:undo
+npm run db:seed
+```
+
+## Architecture Overview
+
+### Three-Layer Pattern
+All API features follow this flow:
+```
+Controller (request handler) → Service (business logic) → Model (Sequelize ORM)
+```
+
+- **Controllers** (`src/controllers/`): Handle HTTP requests/responses only. Delegate to services.
+- **Services** (`src/services/`): Business logic, validation, database operations via `db.util.js`.
+- **Models** (`src/models/`): Sequelize models with hooks, associations, and `toJSON()` for hiding sensitive fields.
+
+### Three-Table User System
+Critical for understanding user data structure:
+1. **User**: Profile info (username, email, firstName, lastName, isActive)
+2. **UserAuth**: Authentication data (password hash, failedAttempts, lockedUntil, isVerified) - shares primary key with User
+3. **UserToken**: Session management (accessToken, refreshToken, deviceInfo) - one-to-many with User
+
+### Response Format Standardization
+All responses use this format (see `src/core/handler.js`):
+
+**Success:**
+```javascript
+{ status: true, transactionId: "...", resCode: "20000", data: {...} }
+```
+
+**Error:**
+```javascript
+{ status: false, transactionId: "...", resCode: "40001", error: { developerMessage: "...", userMessage: "..." } }
+```
+
+Response codes (`resCode`) are defined in `src/config/constants.js` - first 3 digits map to HTTP status. Multi-language messages in `src/config/message.properties.js` (Thai/English).
+
+### Authentication Flow
+- JWT with **separate secrets** for access tokens (15min) and refresh tokens (7d) - security requirement
+- Tokens stored in `UserToken` table for validation and revocation
+- Max 2 active sessions per user with device tracking
+- Account locking: 5 failed attempts → 30-minute lock
+
+### Key Utilities
+- `src/utils/db.util.js`: Wrapper for Sequelize operations (`findOne`, `findAll`, `create`, `update`, `delete`) - services use this instead of calling models directly
+- `src/utils/jwt.util.js`: Token generation and verification with type checking (`access` vs `refresh`)
+- `src/validators/`: Joi schemas - validate before service layer
+
+### Response Handling Pattern
+Controllers use this pattern for all responses (see `src/core/handler.js`):
+
+**Success Response:**
+```javascript
+return response(req, res, genResponseObj(req, '20000', result));
+```
+
+**Error Response:**
+```javascript
+return responseError(req, res, error);
+```
+
+**Functions:**
+- `genResponseObj(req, resCode, data)` → Creates `{ status: true, transactionId, resCode, data }`
+- `response(req, res, responseObj)` → Logs, sets HTTP status from resCode (first 3 digits), sends JSON
+- `responseError(req, res, error)` → Handles errors, maps to localized messages
+- `genErrorResponseObj(req, resCode, developerMessage)` → Creates error object for throwing
+
+## API Endpoints
+
+### Public Endpoints
+- `POST /api/auth/register` - User registration (returns access + refresh tokens)
+- `POST /api/auth/login` - User login (returns access + refresh tokens)
+- `GET /api/health` - Health check
+
+### Protected Endpoints (require `Authorization: Bearer <token>`)
+- `POST /api/auth/refresh-token` - Refresh access token using refresh token
+- `POST /api/auth/logout` - Logout current session
+- `POST /api/auth/logout-all` - Logout all sessions
+- `GET /api/user/profile` - Get user profile
+- `PUT /api/user/profile` - Update user profile
+- `POST /api/auth/change-password` - Change password
+- `POST /api/email-verification/resend` - Resend verification email
+
+## Security Features
+
+- **Password Security**: bcrypt with 10 rounds, complexity requirements (8+ chars, uppercase, lowercase, number, special char)
+- **Account Locking**: 5 failed login attempts → 30-minute account lock
+- **Session Management**: Max 2 active sessions per user, device tracking, oldest session revoked when limit exceeded
+- **Token Storage**: Tokens stored in database for revocation capability
+- **Request Correlation**: Transaction IDs via `x-transaction-id` header for security monitoring
+
+## File Naming Conventions
+
+- Services: `*.service.js` in `src/services/`
+- Controllers: `*.controller.js` in `src/controllers/`
+- Routes: `*.route.js` in `src/routes/`
+- Validators: `*.validator.js` in `src/validators/`
+- Models: `*.model.js` in `src/models/`
+
+## Adding New Features
+
+Follow this pattern when adding new API endpoints:
+
+1. Create Joi validation schema in `src/validators/`
+2. Create service in `src/services/` (business logic + db.util calls)
+3. Create controller in `src/controllers/` (request/response handling)
+4. Create route in `src/routes/` (define endpoints + middleware)
+5. Import route in `src/routes/routes.js`
+
+## Testing Strategy
+
+Tests use ES modules with Babel transformation. Key setup in `tests/setup.js`:
+
+**Mocking approach:**
+- Database, app-config, app-logger are mocked globally before imports
+- Integration tests mock models at class level (User.findOne = jest.fn())
+- JWT tests can generate real tokens using test secrets from setup.js
+- EmailSendingService is mocked as default export with `__esModule: true`
+
+**Important:** ES modules evaluate imports before mocks execute. For integration tests, mocks must be declared before importing app:
+
+```javascript
+jest.mock('../../src/config/database.js');
+jest.mock('../../src/models/model.js');
+import app from '../../src/app.js'; // import AFTER mocks
+```
+
+## Configuration
+
+Environment variables in `.env` - critical security requirements:
+- `JWT_SECRET` and `JWT_REFRESH_SECRET` must be **different** and ≥32 characters (enforced at startup)
+- Sequelize uses `DB_DIALECT` (postgres/mysql) for database selection
+- Email verification has configurable requirements (login, profile, sensitive operations)
+
+Config loaded via `src/config/app-config.js` with validation defaults.
+
+## Route Registration
+
+Add new routes in `src/routes/` then import in `src/routes/routes.js`. All routes mounted under `/api` prefix.
+
+## Important Gotchas
+
+### ES Module Specific
+- **Import Order for Mocking**: ES modules evaluate imports **before** mocks execute. Mocks must be declared BEFORE importing the module being tested (see `tests/integration/auth.integration.test.js:5-16`)
+- **__dirname/__filename**: Requires `fileURLToPath` pattern in ES modules (see `src/config/app-config.js:11-12`)
+
+### Database/Sequelize
+- **db.util Wrapper**: Services MUST use `src/utils/db.util.js` wrappers, not direct model calls. Pattern: `findOne(User, { criteria: { email } })` not `User.findOne({ where: { email } })`
+- **Shared Primary Key**: UserAuth uses `userId` as PK (same as User.id) - this is intentional, not a mistake (see `src/models/user-auth.model.js:119-129`)
+- **Model Hooks**: Password hashing is handled in `beforeCreate`/`beforeUpdate` hooks - never hash manually in services (see `src/models/user-auth.model.js:179-192`)
+- **Transaction Flow**: Transactions pass Controller → Service → db.util → Sequelize. All db.util operations support transactions
+
+### Authentication
+- **JWT Secret Separation**: Access and refresh tokens MUST use different secrets (validated at import time in `src/utils/jwt.util.js:24-28`)
+- **Token Validation Chain**: Middleware checks 5 things: token presence, JWT signature, database record exists, token not expired, user is active (see `src/middleware/auth.middleware.js:17-100`)
+- **req.user Attachment**: Contains Sequelize User model instance, not plain data. Also has `req.token` for UserToken record (see `src/middleware/auth.middleware.js:86-87`)
+- **Session Limit**: Max 2 active sessions per user - OLDEST session is revoked when limit exceeded (not newest) (see `src/models/user-token.model.js:171-200`)
+
+### Error Handling
+- **Throw vs Return**: Services throw errors (via `genErrorResponseObj`), middleware handles them via `responseError` (see `src/core/handler.js:66-90`)
+- **Error Code Mapping**: First 3 digits of `resCode` map to HTTP status (e.g., `40401` → 404, `20002` → 200) (see `src/core/handler.js:9-13`)
+
+### Testing
+- **Mock Order**: Declare mocks before any imports that depend on them. Pattern in `tests/setup.js:34-91` and `tests/integration/auth.integration.test.js:5-16`
+- **JWT Expiration Tests**: Don't use fake timers - manually construct a JWT with an expired `exp` timestamp (see `tests/unit/utils/jwt.util.test.js:60-84`)
+
+### Configuration
+- **JWT Validation**: Happens at module import time, not runtime. Invalid secrets will crash on startup (see `src/utils/jwt.util.js:8-29`)
+- **Config Caching**: Config is cached when imported - changes to `.env` require server restart

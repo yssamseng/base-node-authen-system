@@ -13,7 +13,7 @@ const __dirname = path.dirname(__filename);
 const { port: PORT, env: NODE_ENV } = APP_CONFIG.server;
 
 // Ensure logs directory exists
-const logsDir = path.join(__dirname, '../../logs');
+const logsDir = path.join(__dirname, '../logs');
 if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
   console.log('Created logs directory');
