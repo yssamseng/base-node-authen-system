@@ -158,6 +158,15 @@ Environment variables in `.env` - critical security requirements:
 
 Config loaded via `src/config/app-config.js` with validation defaults.
 
+See `.env.example` for all available configuration options including:
+- Service configuration (name, version)
+- Database connection settings
+- JWT token expiration times
+- CORS origins (comma-separated for multiple)
+- Email provider settings (SMTP or Gmail)
+- Email verification behavior
+- Better Stack logtail integration (optional)
+
 ## Route Registration
 
 Add new routes in `src/routes/` then import in `src/routes/routes.js`. All routes mounted under `/api` prefix.
