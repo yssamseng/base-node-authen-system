@@ -1,4 +1,5 @@
 import { response, responseError, genResponseObj } from '../core/handler.js';
+import { RES_CODE } from '../config/constants.js';
 import {
   resendVerificationEmail as serviceResendVerificationEmail,
   verifyEmail as serviceVerifyEmail,
@@ -17,7 +18,7 @@ import {
 const resendVerificationEmail = async (req, res, next) => {
   try {
     const result = await serviceResendVerificationEmail(req);
-    response(req, res, genResponseObj(req, '20009', result));
+    response(req, res, genResponseObj(req, RES_CODE.EMAIL_VERIFICATION_RESENT, result));
   } catch (error) {
     responseError(req, res, error);
   }
@@ -33,7 +34,7 @@ const resendVerificationEmail = async (req, res, next) => {
 const verifyEmail = async (req, res, next) => {
   try {
     const result = await serviceVerifyEmail(req);
-    response(req, res, genResponseObj(req, '20010', result));
+    response(req, res, genResponseObj(req, RES_CODE.EMAIL_VERIFIED, result));
   } catch (error) {
     responseError(req, res, error);
   }
@@ -49,7 +50,7 @@ const verifyEmail = async (req, res, next) => {
 const requestPasswordReset = async (req, res, next) => {
   try {
     const result = await serviceRequestPasswordReset(req);
-    response(req, res, genResponseObj(req, '20011', result));
+    response(req, res, genResponseObj(req, RES_CODE.PASSWORD_RESET_REQUESTED, result));
   } catch (error) {
     responseError(req, res, error);
   }
@@ -65,7 +66,7 @@ const requestPasswordReset = async (req, res, next) => {
 const resetPassword = async (req, res, next) => {
   try {
     const result = await serviceResetPassword(req);
-    response(req, res, genResponseObj(req, '20012', result));
+    response(req, res, genResponseObj(req, RES_CODE.PASSWORD_RESET_SUCCESS, result));
   } catch (error) {
     responseError(req, res, error);
   }
@@ -81,7 +82,7 @@ const resetPassword = async (req, res, next) => {
 const checkVerificationStatus = async (req, res, next) => {
   try {
     const result = await serviceCheckVerificationStatus(req);
-    response(req, res, genResponseObj(req, '20013', result));
+    response(req, res, genResponseObj(req, RES_CODE.VERIFICATION_STATUS, result));
   } catch (error) {
     responseError(req, res, error);
   }

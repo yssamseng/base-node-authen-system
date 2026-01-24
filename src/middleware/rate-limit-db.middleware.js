@@ -39,7 +39,7 @@ const rateLimitDB = (options = {}) => {
 
       if (!result.allowed) {
         // Rate limit exceeded
-        appLogger.logInfo(`Rate limit exceeded for ${key} (${result.count} requests)`);
+        appLogger.logWarn(`Rate limit exceeded for ${key} (${result.count} requests)`);
 
         res.setHeader('Retry-After', Math.ceil(windowMs / 1000));
 
@@ -70,7 +70,7 @@ const rateLimitDB = (options = {}) => {
               limit: 1
             }).catch(err => {
               // Log error but don't fail the request
-              console.error('Failed to remove rate limit record:', err);
+              appLogger.logError('Failed to remove rate limit record', err, { key });
             });
           }
           requestIds.delete(requestId);
@@ -80,8 +80,7 @@ const rateLimitDB = (options = {}) => {
       next();
     } catch (error) {
       // On error, allow the request but log the error
-      console.error('Rate limit check error:', error);
-      appLogger.logInfo(`Rate limit error for ${key}: ${error.message}`);
+      appLogger.logError(`Rate limit error for ${key}: ${error.message}`, error);
       next();
     }
   };

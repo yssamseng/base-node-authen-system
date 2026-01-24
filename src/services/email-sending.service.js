@@ -6,6 +6,7 @@
 
 import nodemailer from 'nodemailer';
 import APP_CONFIG from '../config/app-config.js';
+import { appLogger } from '../utils/app-logger.util.js';
 
 /**
  * Email service class for sending emails via SMTP or Gmail
@@ -39,7 +40,7 @@ class EmailService {
         this.initializeSmtpTransporter();
       }
     } catch (error) {
-      console.error('Email initialization failed:', error);
+      appLogger.logEmail('initialization_failed', false, { error: error.message, provider: this.emailProvider });
       this.testMode = true;
     }
   }
@@ -53,7 +54,7 @@ class EmailService {
 
     // Check for Gmail configuration
     if (!gmail.user || !gmail.appPassword) {
-      console.warn('Gmail configuration missing. Using test mode.');
+      appLogger.logEmail('gmail_config_missing', false, { provider: 'gmail' });
       this.testMode = true;
       return;
     }
@@ -67,7 +68,7 @@ class EmailService {
     });
 
     this.fromEmail = gmail.user;
-    console.log('Gmail email service configured');
+    appLogger.logEmail('gmail_configured', true, { provider: 'gmail' });
     this.verifyConnection();
   }
 
@@ -80,7 +81,7 @@ class EmailService {
 
     // Check for SMTP configuration
     if (!smtp.host || !smtp.user || !smtp.pass) {
-      console.warn('SMTP configuration missing. Using test mode.');
+      appLogger.logEmail('smtp_config_missing', false, { provider: 'smtp' });
       this.testMode = true;
       return;
     }
@@ -99,7 +100,7 @@ class EmailService {
     });
 
     this.fromEmail = from || smtp.user;
-    console.log('SMTP email service configured');
+    appLogger.logEmail('smtp_configured', true, { provider: 'smtp' });
     this.verifyConnection();
   }
 
@@ -110,10 +111,10 @@ class EmailService {
   verifyConnection() {
     this.transporter.verify((error) => {
       if (error) {
-        console.error(`Email service connection failed (${this.emailProvider}):`, error);
+        appLogger.logEmail('connection_failed', false, { error: error.message, provider: this.emailProvider });
         this.testMode = true;
       } else {
-        console.log(`Email service (${this.emailProvider}) is ready to send messages`);
+        appLogger.logEmail('connection_ready', true, { provider: this.emailProvider });
         this.testMode = false;
       }
     });
@@ -124,9 +125,7 @@ class EmailService {
    */
   async sendEmail(to, subject, html, text = null) {
     if (this.testMode) {
-      console.log('EMAIL TEST MODE - Would send email to:', to);
-      console.log('Subject:', subject);
-      console.log('HTML content preview:', html.substring(0, 200) + '...');
+      appLogger.logEmail('test_mode_skip', true, { to, subject, preview: html.substring(0, 200) });
       return { messageId: 'test-mode-id', testMode: true, provider: this.emailProvider };
     }
 
@@ -140,10 +139,10 @@ class EmailService {
       };
 
       const result = await this.transporter.sendMail(mailOptions);
-      console.log(`Email sent successfully via ${this.emailProvider}:`, result.messageId);
+      appLogger.logEmail('sent', true, { provider: this.emailProvider, messageId: result.messageId, to });
       return { ...result, provider: this.emailProvider };
     } catch (error) {
-      console.error(`Error sending email via ${this.emailProvider}:`, error);
+      appLogger.logEmail('send_failed', false, { error: error.message, provider: this.emailProvider, to });
       throw error;
     }
   }

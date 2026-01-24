@@ -1,4 +1,5 @@
 import { genResponseObj, responseError, response } from '../core/handler.js';
+import { RES_CODE } from '../config/constants.js';
 import * as userProfileService from '../services/user-profile.service.js';
 
 /**
@@ -10,7 +11,7 @@ import * as userProfileService from '../services/user-profile.service.js';
 const getProfile = async (req, res) => {
   try {
     const result = await userProfileService.getProfile(req);
-    return response(req, res, genResponseObj(req, '20000', result));
+    return response(req, res, genResponseObj(req, RES_CODE.SUCCESS, result));
   } catch (error) {
     return responseError(req, res, error);
   }
@@ -25,7 +26,7 @@ const getProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     const result = await userProfileService.updateProfile(req);
-    return response(req, res, genResponseObj(req, '20004', result));
+    return response(req, res, genResponseObj(req, RES_CODE.PROFILE_UPDATED, result));
   } catch (error) {
     return responseError(req, res, error);
   }

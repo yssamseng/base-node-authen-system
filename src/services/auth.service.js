@@ -7,6 +7,7 @@
 import { genErrorResponseObj } from '../core/handler.js';
 import { generateTokenPair, getTokenExpiration } from '../utils/jwt.util.js';
 import { generateEmailVerificationToken } from '../utils/token.util.js';
+import { RES_CODE } from '../config/constants.js';
 import moment from 'moment';
 import models from '../models/model.js';
 import { findOne, create } from '../utils/db.util.js';
@@ -25,14 +26,14 @@ const register = async (req, transaction) => {
   const existingUser = await findOne(User, { criteria: { email } });
 
   if (existingUser) {
-    throw genErrorResponseObj(req, '40001', 'User with this email already exists');
+    throw genErrorResponseObj(req, RES_CODE.EMAIL_ALREADY_EXISTS, 'User with this email already exists');
   }
 
   // Check if username is taken
   const existingUsername = await findOne(User, { criteria: { username } });
 
   if (existingUsername) {
-    throw genErrorResponseObj(req, '40002', 'Username is already taken');
+    throw genErrorResponseObj(req, RES_CODE.USERNAME_ALREADY_EXISTS, 'Username is already taken');
   }
 
   try {
@@ -93,7 +94,7 @@ const register = async (req, transaction) => {
           `${firstName} ${lastName}`.trim() || username
         );
       } catch (emailError) {
-        console.error('Failed to send verification email:', emailError);
+        // Email sending is handled by EmailSendingService with appLogger
         // Continue with registration even if email fails
       }
     }
@@ -132,29 +133,29 @@ const login = async (req) => {
   });
 
   if (!user) {
-    throw genErrorResponseObj(req, '40003', 'Invalid email or password');
+    throw genErrorResponseObj(req, RES_CODE.INVALID_CREDENTIALS, 'Invalid email or password');
   }
 
   // Check if user is active
   if (!user.isActive) {
-    throw genErrorResponseObj(req, '40004', 'Your account has been deactivated');
+    throw genErrorResponseObj(req, RES_CODE.ACCOUNT_DEACTIVATED, 'Your account has been deactivated');
   }
 
   const userAuth = user.auth;
 
   if (!userAuth) {
-    throw genErrorResponseObj(req, '40008', 'Authentication data not found');
+    throw genErrorResponseObj(req, RES_CODE.AUTH_DATA_NOT_FOUND, 'Authentication data not found');
   }
 
   // Check if account is locked
   if (userAuth.isLocked()) {
     const lockedUntilFormatted = moment(userAuth.lockedUntil).format('YYYY-MM-DD HH:mm:ss');
-    throw genErrorResponseObj(req, '40005', `Account is locked until ${lockedUntilFormatted}`);
+    throw genErrorResponseObj(req, RES_CODE.ACCOUNT_LOCKED, `Account is locked until ${lockedUntilFormatted}`);
   }
 
   // Check email verification if enabled and required
   if (emailVerifyConfig.isLoginVerificationRequired() && !userAuth.isVerified) {
-    throw genErrorResponseObj(req, '40009', 'Please verify your email address before logging in');
+    throw genErrorResponseObj(req, RES_CODE.EMAIL_VERIFICATION_REQUIRED, 'Please verify your email address before logging in');
   }
 
   // Verify password
@@ -163,7 +164,7 @@ const login = async (req) => {
   if (!isPasswordValid) {
     // Increment failed attempts
     await userAuth.incrementFailedAttempts();
-    throw genErrorResponseObj(req, '40003', 'Invalid email or password');
+    throw genErrorResponseObj(req, RES_CODE.INVALID_CREDENTIALS, 'Invalid email or password');
   }
 
   // Reset failed attempts on successful login
@@ -217,13 +218,13 @@ const changePassword = async (req) => {
     });
 
     if (!user) {
-      throw genErrorResponseObj(req, '40403', 'User not found');
+      throw genErrorResponseObj(req, RES_CODE.USER_NOT_FOUND, 'User not found');
     }
 
     // Verify current password
     const isCurrentPasswordValid = await user.auth.comparePassword(currentPassword);
     if (!isCurrentPasswordValid) {
-      throw genErrorResponseObj(req, '40003', 'Current password is incorrect');
+      throw genErrorResponseObj(req, RES_CODE.INVALID_CREDENTIALS, 'Current password is incorrect');
     }
 
     // Update password
@@ -246,7 +247,7 @@ const refreshToken = async (req) => {
   const { refreshToken } = req.body;
 
   if (!refreshToken) {
-    throw genErrorResponseObj(req, '40006', 'Refresh token is required');
+    throw genErrorResponseObj(req, RES_CODE.AUTHENTICATION_REQUIRED, 'Refresh token is required');
   }
 
   try {
@@ -267,19 +268,19 @@ const refreshToken = async (req) => {
     });
 
     if (!tokenRecord) {
-      throw genErrorResponseObj(req, '40007', 'Invalid refresh token');
+      throw genErrorResponseObj(req, RES_CODE.TOKEN_INVALID, 'Invalid refresh token');
     }
 
     // Check if refresh token is expired
     if (tokenRecord.isRefreshTokenExpired()) {
       // Revoke the token
       await tokenRecord.revoke();
-      throw genErrorResponseObj(req, '40008', 'Refresh token expired');
+      throw genErrorResponseObj(req, RES_CODE.AUTH_DATA_NOT_FOUND, 'Refresh token expired');
     }
 
     // Check if user is active
     if (!tokenRecord.user.isActive) {
-      throw genErrorResponseObj(req, '40004', 'User account is inactive');
+      throw genErrorResponseObj(req, RES_CODE.ACCOUNT_DEACTIVATED, 'User account is inactive');
     }
 
     // Generate new token pair
@@ -333,7 +334,7 @@ const logout = async (req) => {
         await tokenRecord.revoke();
       }
     } catch (error) {
-      console.error('Error during logout:', error);
+      // Silently handle errors during logout
     }
   }
 

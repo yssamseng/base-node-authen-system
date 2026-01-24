@@ -5,6 +5,7 @@
  */
 
 import { genErrorResponseObj } from '../core/handler.js';
+import { RES_CODE } from '../config/constants.js';
 import { generateEmailVerificationToken } from '../utils/token.util.js';
 import { generatePasswordResetToken } from '../utils/token.util.js';
 import moment from 'moment';
@@ -30,21 +31,21 @@ const resendVerificationEmail = async (req) => {
   });
 
   if (!user) {
-    throw genErrorResponseObj(req, '40403', 'User not found');
+    throw genErrorResponseObj(req, RES_CODE.USER_NOT_FOUND, 'User not found');
   }
 
   if (!user.isActive) {
-    throw genErrorResponseObj(req, '40004', 'Account is deactivated');
+    throw genErrorResponseObj(req, RES_CODE.ACCOUNT_DEACTIVATED, 'Account is deactivated');
   }
 
   const userAuth = user.auth;
 
   if (!userAuth) {
-    throw genErrorResponseObj(req, '40008', 'Authentication data not found');
+    throw genErrorResponseObj(req, RES_CODE.AUTH_DATA_NOT_FOUND, 'Authentication data not found');
   }
 
   if (userAuth.isVerified) {
-    throw genErrorResponseObj(req, '40010', 'Email is already verified');
+    throw genErrorResponseObj(req, RES_CODE.EMAIL_ALREADY_VERIFIED, 'Email is already verified');
   }
 
   // Check if there's a recent verification email sent (cooldown)
@@ -58,7 +59,7 @@ const resendVerificationEmail = async (req) => {
       const remainingCooldown = Math.ceil(
         (emailVerifyConfig.getResendCooldownMs() - timeSinceLastSent) / (60 * 1000)
       );
-      throw genErrorResponseObj(req, '40011', `Please wait ${remainingCooldown} minutes before requesting another verification email`);
+      throw genErrorResponseObj(req, RES_CODE.EMAIL_VERIFICATION_COOLDOWN, `Please wait ${remainingCooldown} minutes before requesting another verification email`);
     }
   }
 
@@ -78,8 +79,8 @@ const resendVerificationEmail = async (req) => {
       `${user.firstName} ${user.lastName}`.trim() || user.username
     );
   } catch (emailError) {
-    console.error('Failed to send verification email:', emailError);
-    throw genErrorResponseObj(req, '50001', 'Failed to send verification email');
+    // Email sending is handled by EmailSendingService with appLogger
+    throw genErrorResponseObj(req, RES_CODE.PLEASE_TRY_AGAIN, 'Failed to send verification email');
   }
 
   return {
@@ -95,7 +96,7 @@ const verifyEmail = async (req) => {
   const { token } = req.body;
 
   if (!token) {
-    throw genErrorResponseObj(req, '40012', 'Verification token is required');
+    throw genErrorResponseObj(req, RES_CODE.VERIFICATION_TOKEN_REQUIRED, 'Verification token is required');
   }
 
   // Find user by verification token
@@ -110,17 +111,17 @@ const verifyEmail = async (req) => {
   });
 
   if (!userAuth) {
-    throw genErrorResponseObj(req, '40013', 'Invalid or expired verification token');
+    throw genErrorResponseObj(req, RES_CODE.VERIFICATION_TOKEN_INVALID, 'Invalid or expired verification token');
   }
 
   // Check if token is expired
   if (userAuth.isEmailVerificationExpired()) {
-    throw genErrorResponseObj(req, '40014', 'Verification token has expired. Please request a new one');
+    throw genErrorResponseObj(req, RES_CODE.VERIFICATION_TOKEN_EXPIRED, 'Verification token has expired. Please request a new one');
   }
 
   // Check if user is already verified
   if (userAuth.isVerified) {
-    throw genErrorResponseObj(req, '40015', 'Email is already verified');
+    throw genErrorResponseObj(req, RES_CODE.EMAIL_ALREADY_VERIFIED_RETRY, 'Email is already verified');
   }
 
   // Mark email as verified
@@ -186,7 +187,7 @@ const requestPasswordReset = async (req) => {
       `${user.firstName} ${user.lastName}`.trim() || user.username
     );
   } catch (emailError) {
-    console.error('Failed to send password reset email:', emailError);
+    // Email sending is handled by EmailSendingService with appLogger
     // Still return success to prevent enumeration
   }
 
@@ -203,7 +204,7 @@ const resetPassword = async (req) => {
   const { token, newPassword } = req.body;
 
   if (!token || !newPassword) {
-    throw genErrorResponseObj(req, '40016', 'Reset token and new password are required');
+    throw genErrorResponseObj(req, RES_CODE.PASSWORD_RESET_REQUIRED, 'Reset token and new password are required');
   }
 
   // Find user by reset token
@@ -218,12 +219,12 @@ const resetPassword = async (req) => {
   });
 
   if (!userAuth) {
-    throw genErrorResponseObj(req, '40017', 'Invalid or expired reset token');
+    throw genErrorResponseObj(req, RES_CODE.PASSWORD_RESET_TOKEN_INVALID, 'Invalid or expired reset token');
   }
 
   // Check if token is expired
   if (userAuth.isPasswordResetExpired()) {
-    throw genErrorResponseObj(req, '40018', 'Password reset token has expired. Please request a new one');
+    throw genErrorResponseObj(req, RES_CODE.PASSWORD_RESET_TOKEN_EXPIRED, 'Password reset token has expired. Please request a new one');
   }
 
   // Update password and clear reset token
@@ -249,7 +250,7 @@ const resetPassword = async (req) => {
  */
 const checkVerificationStatus = async (req) => {
   if (!req.user) {
-    throw genErrorResponseObj(req, '40403', 'User not found');
+    throw genErrorResponseObj(req, RES_CODE.USER_NOT_FOUND, 'User not found');
   }
 
   const userId = req.user.id;
@@ -264,7 +265,7 @@ const checkVerificationStatus = async (req) => {
   });
 
   if (!userAuth) {
-    throw genErrorResponseObj(req, '40008', 'Authentication data not found');
+    throw genErrorResponseObj(req, RES_CODE.AUTH_DATA_NOT_FOUND, 'Authentication data not found');
   }
 
   return {

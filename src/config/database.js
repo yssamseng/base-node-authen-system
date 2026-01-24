@@ -5,6 +5,7 @@
 
 import { Sequelize } from 'sequelize';
 import APP_CONFIG from './app-config.js';
+import { appLogger } from '../utils/app-logger.util.js';
 
 const { name, user, password, host, port, dialect } = APP_CONFIG.database;
 const isDevelopment = APP_CONFIG.server.env === 'development';
@@ -34,12 +35,19 @@ const sequelize = new Sequelize(
 const connectDB = async () => {
   try {
     await sequelize.authenticate();
-    console.log('Database connection has been established successfully.');
+    appLogger.logInfo('Database connection established');
 
     // Sync models with database
     await sequelize.sync({ alter: isDevelopment });
-    console.log('Database synchronized');
+    appLogger.logInfo('Database synchronized');
   } catch (error) {
+    appLogger.logFatal('Database connection failed', error, {
+      database: name,
+      host,
+      port,
+      dialect
+    });
+    // Also log to console for visibility during startup
     console.error('Unable to connect to the database:', error);
     process.exit(1);
   }

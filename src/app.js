@@ -116,7 +116,6 @@ app.use((req, _res, next) => {
 
 // Request logging middleware - logs incoming requests
 app.use((req, _res, next) => {
-  console.log(`${moment().toISOString()} - ${req.method} ${req.path}`);
   appLogger.logRequestReceived(req);
   next();
 });
@@ -142,7 +141,7 @@ app.use((_req, res) => {
 
 // Global error handling middleware - MUST be LAST
 app.use((err, _req, res, _next) => {
-  console.error('Error:', err);
+  appLogger.logError('Unhandled error', err);
   res.status(err.status || 500).json({
     success: false,
     message: err.message || 'Internal server error'

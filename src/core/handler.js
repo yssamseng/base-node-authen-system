@@ -1,6 +1,6 @@
 // src/core/response.js
 import { appLogger } from '../utils/app-logger.util.js';
-import { resCode } from '../config/constants.js';
+import { resCodeMessagesMapping, RES_CODE } from '../config/constants.js';
 import moment from 'moment';
 
 /** ---------- Helpers ---------- **/
@@ -25,8 +25,8 @@ const getLanguage = (req) => {
   return ['th', 'en'].includes(lang) ? lang : 'th';
 };
 
-/** หา message object จาก resCode, ถ้าไม่มีใช้ 50000 */
-const resolveMessageObj = (_resCode) => resCode?.[_resCode] ?? resCode?.[50000] ?? { th: 'เกิดข้อผิดพลาด', en: 'Unexpected error' };
+/** หา message object จาก resCodeMessagesMapping, ถ้าไม่มีใช้ INTERNAL_ERROR */
+const resolveMessageObj = (_resCode) => resCodeMessagesMapping?.[_resCode] ?? resCodeMessagesMapping?.[RES_CODE.INTERNAL_ERROR] ?? { th: 'เกิดข้อผิดพลาด', en: 'Unexpected error' };
 
 /** บันทึก responseObject ลง res สำหรับ trace/debug */
 const attachResponseObject = (res, body) => {
@@ -58,14 +58,14 @@ const response = (req, res, responseObj) => {
 /**
  * ส่ง response เมื่อเกิด error
  * - ถ้ามี e.resCode จะ map เป็น HTTP status
- * - ถ้าไม่มี ใช้ 500xx และคืน userMessage จากตาราง resCode
+ * - ถ้าไม่มี ใช้ 500xx และคืน userMessage จากตาราง resCodeMessagesMapping
  * @param {Request} req
  * @param {Response} res
  * @param {Error & {resCode?: number|string, error?: any}} e
  */
 const responseError = (req, res, e = {}) => {
   const lang = getLanguage(req);
-  const fallbackCode = '50000';
+  const fallbackCode = RES_CODE.INTERNAL_ERROR;
   const useCode = e?.resCode ?? fallbackCode;
   const status = toHttpStatus(useCode);
 

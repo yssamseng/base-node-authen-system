@@ -41,7 +41,7 @@ const rateLimit = (options = {}) => {
     // Check limit
     const userAttempts = attempts.get(key) || [];
     if (userAttempts.length >= maxAttempts) {
-      appLogger.logInfo(`Rate limit exceeded for ${key} (${userAttempts.length} attempts)`);
+      appLogger.logWarn(`Rate limit exceeded for ${key} (${userAttempts.length} attempts)`);
 
       return res.status(429).json({
         success: false,

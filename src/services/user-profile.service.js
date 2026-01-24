@@ -5,6 +5,7 @@
  */
 
 import { genErrorResponseObj } from '../core/handler.js';
+import { RES_CODE } from '../config/constants.js';
 import moment from 'moment';
 import models from '../models/model.js';
 import { findOne, update } from '../utils/db.util.js';
@@ -15,7 +16,7 @@ const { User, UserAuth } = models;
  */
 const getProfile = async (req) => {
   if (!req.user) {
-    throw genErrorResponseObj(req, '40403', 'User not found');
+    throw genErrorResponseObj(req, RES_CODE.USER_NOT_FOUND, 'User not found');
   }
 
   const userId = req.user.id;
@@ -30,7 +31,7 @@ const getProfile = async (req) => {
   });
 
   if (!user) {
-    throw genErrorResponseObj(req, '40403', 'User not found');
+    throw genErrorResponseObj(req, RES_CODE.USER_NOT_FOUND, 'User not found');
   }
 
   return {
@@ -46,7 +47,7 @@ const getProfile = async (req) => {
  */
 const updateProfile = async (req) => {
   if (!req.user) {
-    throw genErrorResponseObj(req, '40403', 'User not found');
+    throw genErrorResponseObj(req, RES_CODE.USER_NOT_FOUND, 'User not found');
   }
 
   const userId = req.user.id;
@@ -55,7 +56,7 @@ const updateProfile = async (req) => {
   const user = await findOne(User, { pk: userId });
 
   if (!user) {
-    throw genErrorResponseObj(req, '40403', 'User not found');
+    throw genErrorResponseObj(req, RES_CODE.USER_NOT_FOUND, 'User not found');
   }
 
   // Update user fields

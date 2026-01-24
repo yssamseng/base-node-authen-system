@@ -13,15 +13,14 @@ const scheduleRateLimitCleanup = () => {
       const deletedCount = await RateLimit.cleanupOldRecords(1);
 
       if (deletedCount > 0) {
-        console.log(`RateLimit cleanup: Removed ${deletedCount} old records`);
-        appLogger.logInfo(`RateLimit cleanup: Removed ${deletedCount} old records`);
+        appLogger.logDebug(`RateLimit cleanup: Removed ${deletedCount} old records`);
       }
     } catch (error) {
-      console.error('RateLimit cleanup error:', error);
+      appLogger.logError('RateLimit cleanup error', error);
     }
   });
 
-  console.log('✅ RateLimit cleanup job scheduled (runs every hour)');
+  appLogger.logDebug('RateLimit cleanup job scheduled (runs every hour)');
 };
 
 /**
@@ -30,10 +29,12 @@ const scheduleRateLimitCleanup = () => {
 const runRateLimitCleanup = async () => {
   try {
     const deletedCount = await RateLimit.cleanupOldRecords(1);
-    console.log(`RateLimit cleanup: Removed ${deletedCount} old records on startup`);
+    if (deletedCount > 0) {
+      appLogger.logDebug(`RateLimit cleanup: Removed ${deletedCount} old records on startup`);
+    }
     return deletedCount;
   } catch (error) {
-    console.error('RateLimit cleanup error:', error);
+    appLogger.logError('RateLimit cleanup error', error);
     return 0;
   }
 };

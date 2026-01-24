@@ -1,5 +1,6 @@
 import { DataTypes, Model } from 'sequelize';
 import { sequelize } from '../config/database.js';
+import { appLogger } from '../utils/app-logger.util.js';
 import moment from 'moment';
 
 /**
@@ -189,12 +190,12 @@ UserToken.enforceSessionLimit = async (userId, maxSessions = 2) => {
       });
 
       if (oldestSession) {
-        console.log(`Revoking oldest session for user ${userId} to enforce session limit`);
+        appLogger.logDebug(`Revoking oldest session for user ${userId} to enforce session limit`);
         await oldestSession.revoke();
       }
     }
   } catch (error) {
-    console.error('Error enforcing session limit:', error);
+    appLogger.logError('Error enforcing session limit', error, { userId });
     // Don't throw error to prevent blocking login
   }
 };
@@ -227,10 +228,10 @@ UserToken.cleanupExpiredTokens = async () => {
     });
 
     if (deletedCount > 0) {
-      console.log(`Cleaned up ${deletedCount} expired/revoked tokens`);
+      appLogger.logDebug(`Cleaned up ${deletedCount} expired/revoked tokens`);
     }
   } catch (error) {
-    console.error('Error cleaning up expired tokens:', error);
+    appLogger.logError('Error cleaning up expired tokens', error);
   }
 };
 

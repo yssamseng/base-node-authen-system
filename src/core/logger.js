@@ -2,6 +2,7 @@
  * Winston Logger Configuration
  * Provides structured logging with console and file transports
  * Integrates with Better Stack (Logtail) for centralized logging in production
+ * Uses Syslog severity levels (RFC 5424)
  * @module core/logger
  */
 
@@ -24,6 +25,16 @@ if (logtailToken && logtailToken.trim() !== '' && logtailEndpoint && logtailEndp
 
 const { name: serviceName, version: serviceVersion } = APP_CONFIG.service;
 const environment = APP_CONFIG.server.env;
+
+// Syslog severity levels (RFC 5424) with priorities
+const syslogLevels = {
+  crit: 0,      // Critical - system failures
+  error: 1,     // Error - application errors
+  warning: 2,   // Warning - potential issues
+  notice: 3,    // Notice - normal but significant
+  info: 4,      // Informational
+  debug: 5,     // Debug-level messages
+};
 
 // consoleFormat สำหรับ Development
 const consoleFormat = winston.format.combine(
@@ -53,9 +64,10 @@ if (environment !== 'production') {
   );
 }
 
-// Winston logger instance with file and optional console/Logtail transports
+// Winston logger instance with Syslog levels and file/Logtail transports
 const logger = winston.createLogger({
-  level: environment === 'production' ? LOG_CONSTANT.LEVEL.INFO : LOG_CONSTANT.LEVEL.DEBUG,
+  levels: syslogLevels,
+  level: environment === 'production' ? LOG_CONSTANT.LEVEL.NOTICE : LOG_CONSTANT.LEVEL.DEBUG,
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.errors({ stack: true }),
@@ -69,14 +81,20 @@ const logger = winston.createLogger({
   },
   transports: [
     ...transports,
-    // Error log file
+    // Critical/Error log file (crit and above)
     new winston.transports.File({
-      filename: 'logs/error.log',
-      level: 'error',
+      filename: 'logs/fatal.log',
+      level: LOG_CONSTANT.LEVEL.CRIT,
       maxsize: 5242880, // 5MB
-      maxFiles: 5,
+      maxFiles: 1,
     }),
-    // Combined log file
+    new winston.transports.File({
+      filename: 'logs/notice-error.log',
+      level: LOG_CONSTANT.LEVEL.NOTICE,
+      maxsize: 5242880, // 5MB
+      maxFiles: 3,
+    }),
+    // Combined log file (all levels)
     new winston.transports.File({
       filename: 'logs/combined.log',
       maxsize: 5242880, // 5MB

@@ -26,7 +26,7 @@ const healthCheck = async (req, res) => {
       status: 'connected',
       message: 'Database connection is healthy'
     };
-    appLogger.logInfo('Health check: Database connected');
+    appLogger.logDebug('Health check: Database connected');
   } catch (error) {
     healthStatus.status = 'unhealthy';
     healthStatus.database = {

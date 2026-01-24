@@ -68,6 +68,8 @@ Response codes (`resCode`) are defined in `src/config/constants.js` - first 3 di
 ### Key Utilities
 - `src/utils/db.util.js`: Wrapper for Sequelize operations (`findOne`, `findAll`, `create`, `update`, `delete`) - services use this instead of calling models directly
 - `src/utils/jwt.util.js`: Token generation and verification with type checking (`access` vs `refresh`)
+- `src/utils/app-logger.util.js`: Structured logging with trace data support (see Logging Architecture below)
+- `src/utils/trace.util.js`: AsyncLocalStorage for request correlation tracking
 - `src/validators/`: Joi schemas - validate before service layer
 
 ### Response Handling Pattern
@@ -88,6 +90,89 @@ return responseError(req, res, error);
 - `response(req, res, responseObj)` → Logs, sets HTTP status from resCode (first 3 digits), sends JSON
 - `responseError(req, res, error)` → Handles errors, maps to localized messages
 - `genErrorResponseObj(req, resCode, developerMessage)` → Creates error object for throwing
+
+## Logging Architecture
+
+### Application Logger (`src/utils/app-logger.util.js`)
+
+The app provides structured logging with automatic trace data injection via AsyncLocalStorage. All log methods automatically include `correlation_id` and `user_id` from request context.
+
+### Log Levels (Syslog Severity)
+- **FATAL (CRIT)**: Critical errors causing service failure
+- **ERROR**: Error-level logging
+- **WARNING**: Warning-level for client errors (4xx) and slow operations
+- **NOTICE**: Normal but significant messages (info, service calls, performance)
+- **INFO**: HTTP requests/responses, email events
+- **DEBUG**: Database operations, verbose debugging
+
+### Logger Methods
+
+```javascript
+import { appLogger } from './utils/app-logger.util.js';
+
+// Fatal/Critical errors
+appLogger.logFatal(message, error, details);
+
+// Debug logging
+appLogger.logDebug(message, details);
+
+// Info logging
+appLogger.logInfo(message);
+
+// Warning logging
+appLogger.logWarn(message, details);
+
+// Error logging
+appLogger.logError(message, error, details);
+
+// HTTP request/response logging (with timing)
+appLogger.logRequestReceived(req);
+appLogger.logResponse(req, res, responseData, statusCode);
+appLogger.logResponseError(req, error, statusCode);
+
+// Database operations (with slow query tracking)
+appLogger.logDatabase(operation, tableName, details);
+
+// Service call logging
+appLogger.logService(serviceName, operation, details);
+
+// Performance metrics (>1000ms triggers WARNING)
+appLogger.logPerformance(operation, duration, details);
+
+// Email events
+appLogger.logEmail(action, success, details);
+```
+
+### Automatic Behavior
+
+- **Trace Data**: All logs automatically include `correlation_id` and `user_id` from AsyncLocalStorage
+- **Timing**: HTTP logs use `hrtime.bigint()` for nanosecond-precision duration tracking
+- **Error Severity**: `logResponseError` automatically uses WARNING for 4xx, ERROR for 5xx
+- **Performance**: `logPerformance` automatically uses WARNING for operations >1000ms
+- **Response Size**: `logResponse` automatically calculates and sets `Content-Length` header
+
+### Log Types
+- `FATAL`: Critical system failures
+- `DEBUG`: Debug information
+- `HTTP`: HTTP request/response lifecycle
+- `DB`: Database operations
+- `SERVICE`: Service method calls
+- `PERFORMANCE`: Performance metrics
+- `EMAIL`: Email sending events
+
+### Core Logger (`src/core/logger.js`)
+
+Underlying Winston logger with:
+- **File transports**: `error.log` (errors only), `combined.log` (all levels)
+- **Console transport**: Colored output for development
+- **Better Stack integration**: Optional centralized log management via `LOGTAIL_SOURCE_TOKEN`
+- **Structured JSON**: All logs output as JSON for parsing
+
+### Trace Context (`src/utils/trace.util.js`)
+
+Uses AsyncLocalStorage to maintain request context across async operations:
+- `correlation_id`: From `x-transaction-id` or `x-correlation-id` header, or generated UUID
+- `user_id`: Attached from authenticated user in `req.user`
 
 ## API Endpoints
 
@@ -111,7 +196,7 @@ return responseError(req, res, error);
 - **Account Locking**: 5 failed login attempts → 30-minute account lock
 - **Session Management**: Max 2 active sessions per user, device tracking, oldest session revoked when limit exceeded
 - **Token Storage**: Tokens stored in database for revocation capability
-- **Request Correlation**: Transaction IDs via `x-transaction-id` header for security monitoring
+- **Request Correlation**: Transaction IDs via `x-transaction-id` header for security monitoring (see Logging Architecture)
 
 ## File Naming Conventions
 

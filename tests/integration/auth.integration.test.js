@@ -103,7 +103,7 @@ describe('Authentication Integration Tests', () => {
 
       expect(response.body).toMatchObject({
         status: true,
-        resCode: '20000',
+        resCode: '20001', // REGISTRATION_SUCCESS
         data: expect.objectContaining({
           user: expect.objectContaining({
             username: 'testuser',

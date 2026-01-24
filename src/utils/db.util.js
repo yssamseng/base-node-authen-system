@@ -1,28 +1,69 @@
 /**
  * Base Database Utility
  * Provides essential CRUD operations with logging
+ * Tracks database operation timing and logs slow queries (>1000ms)
  */
 
 import { appLogger } from './app-logger.util.js';
 
+// Slow query threshold in milliseconds
+const SLOW_QUERY_THRESHOLD = 1000;
+
 /**
- * Helper method to log database operations using the app logger
+ * Helper method to log database operations with timing
+ * Normal queries use logDatabase (DEBUG level)
+ * Slow queries (>1000ms) use logPerformance (WARNING level)
  */
 const logOperation = {
-  info: (operation, model, details = {}) => {
-    appLogger.logDatabase(operation, model.name, { ...details, success: true });
+  info: (operation, model, details = {}, durationMs = null) => {
+    const logDetails = { ...details };
+    if (durationMs !== null) {
+      logDetails.duration_ms = parseFloat(durationMs.toFixed(2));
+    }
+
+    // Slow query → logPerformance (WARNING), Normal query → logDatabase (DEBUG)
+    if (durationMs !== null && durationMs > SLOW_QUERY_THRESHOLD) {
+      appLogger.logPerformance(`${model.name}.${operation}`, durationMs, {
+        table: model.name,
+        operation,
+        ...logDetails
+      });
+    } else {
+      appLogger.logDatabase(operation, model.name, { ...logDetails, success: true });
+    }
   },
-  error: (operation, model, error, details = {}) => {
-    appLogger.logDatabase(operation, model.name, {
+  error: (operation, model, error, details = {}, durationMs = null) => {
+    const logDetails = {
       ...details,
       success: false,
       error: error.message,
       stack: error.stack
-    });
+    };
+    if (durationMs !== null) {
+      logDetails.duration_ms = parseFloat(durationMs.toFixed(2));
+    }
+    appLogger.logDatabase(operation, model.name, logDetails);
   },
-  warn: (operation, model, message, details = {}) => {
-    appLogger.logDatabase(operation, model.name, { ...details, warning: message });
+  warn: (operation, model, message, details = {}, durationMs = null) => {
+    const logDetails = { ...details, warning: message };
+    if (durationMs !== null) {
+      logDetails.duration_ms = parseFloat(durationMs.toFixed(2));
+    }
+    appLogger.logDatabase(operation, model.name, logDetails);
   }
+};
+
+/**
+ * Execute database operation with timing tracking
+ * @param {Function} operationFn - Function that executes the database operation
+ * @returns {Promise<any>} Result of the operation
+ */
+const withTiming = async (operationFn) => {
+  const startTime = process.hrtime.bigint();
+  const result = await operationFn();
+  const endTime = process.hrtime.bigint();
+  const durationMs = Number(endTime - startTime) / 1_000_000;
+  return { result, durationMs };
 };
 
 /**
@@ -40,22 +81,23 @@ const findOne = async (model, { pk, criteria = {}, include = [], attributes = nu
   const details = { pk, criteria: Object.keys(criteria), hasInclude: include.length > 0, hasTransaction: !!transaction };
 
   try {
-    logOperation.info(operation, model, details);
+    const { result, durationMs } = await withTiming(async () => {
+      const where = pk ? { id: pk } : criteria;
+      const options = {
+        where,
+        include,
+        ...(attributes && { attributes }),
+        ...(transaction && { transaction })
+      };
+      return await model.findOne(options);
+    });
 
-    const where = pk ? { id: pk } : criteria;
-    const options = {
-      where,
-      include,
-      ...(attributes && { attributes }),
-      ...(transaction && { transaction })
-    };
-
-    const result = await model.findOne(options);
+    logOperation.info(operation, model, details, durationMs);
 
     if (result) {
-      logOperation.info(operation, model, { ...details, found: true, id: result.id });
+      logOperation.info(operation, model, { ...details, found: true, id: result.id }, durationMs);
     } else {
-      logOperation.warn(operation, model, 'Record not found', details);
+      logOperation.warn(operation, model, 'Record not found', details, durationMs);
     }
 
     return result;
@@ -97,22 +139,21 @@ const findAll = async (model, {
   };
 
   try {
-    logOperation.info(operation, model, details);
+    const { result, durationMs } = await withTiming(async () => {
+      const options = {
+        where: criteria,
+        include,
+        ...(attributes && { attributes }),
+        ...(order && order.length > 0 && { order }),
+        ...(limit && { limit }),
+        ...(offset && { offset }),
+        ...(transaction && { transaction })
+      };
+      return await model.findAll(options);
+    });
 
-    const options = {
-      where: criteria,
-      include,
-      ...(attributes && { attributes }),
-      ...(order && order.length > 0 && { order }),
-      ...(limit && { limit }),
-      ...(offset && { offset }),
-      ...(transaction && { transaction })
-    };
-
-    const results = await model.findAll(options);
-
-    logOperation.info(operation, model, { ...details, count: results.length });
-    return results;
+    logOperation.info(operation, model, { ...details, count: result.length }, durationMs);
+    return result;
   } catch (error) {
     logOperation.error(operation, model, error, details);
     throw error;
@@ -138,17 +179,16 @@ const create = async (model, { data, include = [], attributes = null, transactio
   };
 
   try {
-    logOperation.info(operation, model, details);
+    const { result, durationMs } = await withTiming(async () => {
+      const options = {
+        include,
+        ...(attributes && { attributes }),
+        ...(transaction && { transaction })
+      };
+      return await model.create(data, options);
+    });
 
-    const options = {
-      include,
-      ...(attributes && { attributes }),
-      ...(transaction && { transaction })
-    };
-
-    const result = await model.create(data, options);
-
-    logOperation.info(operation, model, { ...details, created: true, id: result.id });
+    logOperation.info(operation, model, { ...details, created: true, id: result.id }, durationMs);
     return result;
   } catch (error) {
     logOperation.error(operation, model, error, details);
@@ -174,16 +214,16 @@ const update = async (model, { data, criteria = {}, transaction = null } = {}) =
   };
 
   try {
-    logOperation.info(operation, model, details);
+    const { result, durationMs } = await withTiming(async () => {
+      const options = {
+        where: criteria,
+        ...(transaction && { transaction })
+      };
+      return await model.update(data, options);
+    });
 
-    const options = {
-      where: criteria,
-      ...(transaction && { transaction })
-    };
-
-    const [affectedCount] = await model.update(data, options);
-
-    logOperation.info(operation, model, { ...details, affectedCount });
+    const [affectedCount] = result;
+    logOperation.info(operation, model, { ...details, affectedCount }, durationMs);
     return [affectedCount];
   } catch (error) {
     logOperation.error(operation, model, error, details);
@@ -209,18 +249,17 @@ const deleteRecord = async (model, { criteria = {}, force = false, transaction =
   };
 
   try {
-    logOperation.info(operation, model, details);
+    const { result, durationMs } = await withTiming(async () => {
+      const options = {
+        where: criteria,
+        force,
+        ...(transaction && { transaction })
+      };
+      return await model.destroy(options);
+    });
 
-    const options = {
-      where: criteria,
-      force,
-      ...(transaction && { transaction })
-    };
-
-    const deletedCount = await model.destroy(options);
-
-    logOperation.info(operation, model, { ...details, deletedCount });
-    return deletedCount;
+    logOperation.info(operation, model, { ...details, deletedCount: result }, durationMs);
+    return result;
   } catch (error) {
     logOperation.error(operation, model, error, details);
     throw error;

@@ -1,5 +1,6 @@
 import { verifyAccessToken } from '../utils/jwt.util.js';
 import { responseError, genErrorResponseObj } from '../core/handler.js';
+import { appLogger } from '../utils/app-logger.util.js';
 import models from '../models/model.js';
 const { User, UserToken } = models;
 import { runWithTrace } from '../utils/trace.util.js';
@@ -93,7 +94,7 @@ const authenticate = async (req, res, next) => {
     };
     runWithTrace(store, next);
   } catch (error) {
-    console.error('Auth middleware error:', error);
+    appLogger.logError('Auth middleware error', error);
     const errorObj = genErrorResponseObj(req, '50000', 'Server error during authentication');
     responseError(req, res, errorObj);
   }

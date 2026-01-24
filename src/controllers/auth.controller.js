@@ -1,5 +1,6 @@
 import { genResponseObj, responseError, response } from '../core/handler.js';
 import { sequelize } from '../config/database.js';
+import { RES_CODE } from '../config/constants.js';
 import * as authService from '../services/auth.service.js';
 
 /**
@@ -13,7 +14,7 @@ const register = async (req, res) => {
   try {
     const result = await authService.register(req, transaction );
     await transaction.commit();
-    return response(req, res, genResponseObj(req, '20000', result));
+    return response(req, res, genResponseObj(req, RES_CODE.REGISTRATION_SUCCESS, result));
   } catch (error) {
     if (!transaction.finished) {
       await transaction.rollback();
@@ -31,7 +32,7 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   try {
     const result = await authService.login(req);
-    return response(req, res, genResponseObj(req, '20002', result));
+    return response(req, res, genResponseObj(req, RES_CODE.LOGIN_SUCCESS, result));
   } catch (error) {
     return responseError(req, res, error);
   }
@@ -46,7 +47,7 @@ const login = async (req, res) => {
 const logout = async (req, res) => {
   try {
     const result = await authService.logout(req);
-    return response(req, res, genResponseObj(req, '20003', result));
+    return response(req, res, genResponseObj(req, RES_CODE.LOGOUT_SUCCESS, result));
   } catch (error) {
     return responseError(req, res, error);
   }
@@ -61,7 +62,7 @@ const logout = async (req, res) => {
 const logoutAll = async (req, res) => {
   try {
     const result = await authService.logoutAll(req);
-    return response(req, res, genResponseObj(req, '20003', result));
+    return response(req, res, genResponseObj(req, RES_CODE.LOGOUT_SUCCESS, result));
   } catch (error) {
     return responseError(req, res, error);
   }
@@ -76,7 +77,7 @@ const logoutAll = async (req, res) => {
 const refreshToken = async (req, res) => {
   try {
     const result = await authService.refreshToken(req);
-    return response(req, res, genResponseObj(req, '20005', result));
+    return response(req, res, genResponseObj(req, RES_CODE.TOKEN_REFRESH_SUCCESS, result));
   } catch (error) {
     return responseError(req, res, error);
   }
@@ -91,7 +92,7 @@ const refreshToken = async (req, res) => {
 const changePassword = async (req, res) => {
   try {
     const result = await authService.changePassword(req);
-    return response(req, res, genResponseObj(req, '20004', result));
+    return response(req, res, genResponseObj(req, RES_CODE.PROFILE_UPDATED, result));
   } catch (error) {
     return responseError(req, res, error);
   }
