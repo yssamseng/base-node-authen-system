@@ -35,6 +35,13 @@ const APP_CONFIG = {
     name: process.env.DB_NAME || "test-auth",
     user: process.env.DB_USER || "postgres",
     password: process.env.DB_PASSWORD || "",
+    retry: {
+      maxRetries: Number(process.env.DB_RETRY_MAX) || 3,
+      initialDelay: Number(process.env.DB_RETRY_DELAY) || 2000,
+      maxDelay: Number(process.env.DB_RETRY_MAX_DELAY) || 30000,
+      backoffMultiplier: 2,
+      retrySync: process.env.DB_RETRY_SYNC !== "false",
+    },
   },
 
   jwt: {

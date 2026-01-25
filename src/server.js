@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import app from './app.js';
-import { connectDB } from './config/database.js';
+import { connectDB, setupConnectionListeners } from './config/database.js';
 import { appLogger } from './utils/app-logger.util.js';
 import APP_CONFIG from './config/app-config.js';
 import { scheduleRateLimitCleanup, runRateLimitCleanup } from './jobs/rate-limit-cleanup.job.js';
@@ -59,6 +59,9 @@ const startServer = async () => {
     // Connect to database
     appLogger.logDebug('Connecting to database...');
     await connectDB();
+
+    // Setup database reconnection listeners for automatic recovery
+    setupConnectionListeners();
 
     // Run initial rate limit cleanup
     await runRateLimitCleanup();
