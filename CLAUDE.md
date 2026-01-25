@@ -246,6 +246,7 @@ Config loaded via `src/config/app-config.js` with validation defaults.
 See `.env.example` for all available configuration options including:
 - Service configuration (name, version)
 - Database connection settings
+- Database retry configuration (max retries, delays, backoff multiplier)
 - JWT token expiration times
 - CORS origins (comma-separated for multiple)
 - Email provider settings (SMTP or Gmail)
@@ -267,6 +268,7 @@ Add new routes in `src/routes/` then import in `src/routes/routes.js`. All route
 - **Shared Primary Key**: UserAuth uses `userId` as PK (same as User.id) - this is intentional, not a mistake (see `src/models/user-auth.model.js:119-129`)
 - **Model Hooks**: Password hashing is handled in `beforeCreate`/`beforeUpdate` hooks - never hash manually in services (see `src/models/user-auth.model.js:179-192`)
 - **Transaction Flow**: Transactions pass Controller → Service → db.util → Sequelize. All db.util operations support transactions
+- **Connection Retry**: Database connection has automatic retry with exponential backoff on startup and health check every 30s for runtime reconnection (see `src/config/database.js:46-144`)
 
 ### Authentication
 - **JWT Secret Separation**: Access and refresh tokens MUST use different secrets (validated at import time in `src/utils/jwt.util.js:24-28`)
@@ -285,3 +287,10 @@ Add new routes in `src/routes/` then import in `src/routes/routes.js`. All route
 ### Configuration
 - **JWT Validation**: Happens at module import time, not runtime. Invalid secrets will crash on startup (see `src/utils/jwt.util.js:8-29`)
 - **Config Caching**: Config is cached when imported - changes to `.env` require server restart
+- **Database Retry**: Automatic connection retry with exponential backoff (configured via `APP_CONFIG.database.retry` in `src/config/app-config.js`)
+  - `maxRetries`: Maximum connection attempts (default: 10)
+  - `initialDelay`: Initial retry delay in ms (default: 2000)
+  - `maxDelay`: Maximum retry delay in ms (default: 30000)
+  - `backoffMultiplier`: Exponential backoff multiplier (default: 2)
+  - `retrySync`: Retry database sync if it fails after connection (default: true)
+  - Runtime health checks every 30 seconds for automatic reconnection
