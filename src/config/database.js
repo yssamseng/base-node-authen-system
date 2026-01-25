@@ -187,8 +187,8 @@ const setupConnectionListeners = () => {
   // Ensure connection pools are initialized
   sequelize.connectionManager.initPools();
 
-  // Health check interval (every 30 seconds)
-  const healthCheckInterval = 30000;
+  // Health check interval from config (default: 60 seconds)
+  const healthCheckInterval = RETRY_CONFIG.healthCheckInterval;
 
   const healthCheckLoop = async () => {
     const isHealthy = await checkConnectionHealth();

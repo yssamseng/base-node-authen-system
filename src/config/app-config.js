@@ -36,11 +36,12 @@ const APP_CONFIG = {
     user: process.env.DB_USER || "postgres",
     password: process.env.DB_PASSWORD || "",
     retry: {
-      maxRetries: Number(process.env.DB_RETRY_MAX) || 3,
+      maxRetries: Number(process.env.DB_RETRY_MAX) || 10,
       initialDelay: Number(process.env.DB_RETRY_DELAY) || 2000,
       maxDelay: Number(process.env.DB_RETRY_MAX_DELAY) || 30000,
       backoffMultiplier: 2,
       retrySync: process.env.DB_RETRY_SYNC !== "false",
+      healthCheckInterval: Number(process.env.DB_HEALTH_CHECK_INTERVAL) || 60000, // 60 seconds default
     },
   },
 
