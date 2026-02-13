@@ -1,26 +1,18 @@
 /**
  * Main API routes aggregator
- * Mounts all route modules under /api prefix
+ * Mounts all route modules under /api prefix with versioning
  * @module routes/routes
  */
 
 import express from 'express';
 const router = express.Router();
-import authRoutes from './auth.route.js';
-import userRoutes from './user.route.js';
-import emailVerificationRoutes from './email-verification.route.js';
+import v1Routes from './v1/index.js';
 import { healthCheck } from '../controllers/health.controller.js';
 
-// Health check route with database status
+// Health check route (no version)
 router.get('/health', healthCheck);
 
-// Mount auth routes
-router.use('/auth', authRoutes);
-
-// Mount email verification routes
-router.use('/email-verification', emailVerificationRoutes);
-
-// Mount user routes
-router.use('/user', userRoutes);
+// Mount v1 routes under /api/v1
+router.use('/v1', v1Routes);
 
 export default router;

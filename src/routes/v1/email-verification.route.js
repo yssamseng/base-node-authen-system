@@ -5,17 +5,17 @@
  */
 
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth.middleware.js';
-import * as emailVerification from '../controllers/email-verification.controller.js';
+import { authenticate } from '../../middleware/auth.middleware.js';
+import * as emailVerification from '../../controllers/email-verification.controller.js';
 import {
   resendVerificationSchema,
   verifyEmailSchema,
   requestPasswordResetSchema,
   resetPasswordSchema
-} from '../validators/email-verification.validator.js';
-import { validateBody } from '../validators/validator.js';
-import { rateLimitDB } from '../middleware/rate-limit-db.middleware.js';
-import { EMAIL_RATE_LIMIT_WINDOW_MS, EMAIL_RATE_LIMIT_MAX_REQUESTS } from '../config/time.constants.js';
+} from '../../validators/email-verification.validator.js';
+import { validateBody } from '../../validators/validator.js';
+import { rateLimitDB } from '../../middleware/rate-limit-db.middleware.js';
+import { EMAIL_RATE_LIMIT_WINDOW_MS, EMAIL_RATE_LIMIT_MAX_REQUESTS } from '../../config/time.constants.js';
 
 const router = Router();
 

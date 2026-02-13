@@ -176,19 +176,36 @@ Uses AsyncLocalStorage to maintain request context across async operations:
 
 ## API Endpoints
 
-### Public Endpoints
-- `POST /api/auth/register` - User registration (returns access + refresh tokens)
-- `POST /api/auth/login` - User login (returns access + refresh tokens)
-- `GET /api/health` - Health check
+### API Versioning
+All API endpoints use versioning: `/api/v1/...`
+
+**Version Structure:**
+- `/api/health` - Health check (no version)
+- `/api/v1/*` - All versioned endpoints
+
+**Adding New Versions:**
+1. Create new version directory: `src/routes/v2/`
+2. Copy and modify routes from `v1/`
+3. Create `src/routes/v2/index.js` to aggregate v2 routes
+4. Add to `src/routes/routes.js`: `router.use('/v2', v2Routes);`
+
+### Public Endpoints (v1)
+- `POST /api/v1/auth/register` - User registration (returns access + refresh tokens)
+- `POST /api/v1/auth/login` - User login (returns access + refresh tokens)
+- `GET /api/health` - Health check (no version)
 
 ### Protected Endpoints (require `Authorization: Bearer <token>`)
-- `POST /api/auth/refresh-token` - Refresh access token using refresh token
-- `POST /api/auth/logout` - Logout current session
-- `POST /api/auth/logout-all` - Logout all sessions
-- `GET /api/user/profile` - Get user profile
-- `PUT /api/user/profile` - Update user profile
-- `POST /api/auth/change-password` - Change password
-- `POST /api/email-verification/resend` - Resend verification email
+- `POST /api/v1/auth/refresh-token` - Refresh access token using refresh token
+- `POST /api/v1/auth/logout` - Logout current session
+- `POST /api/v1/auth/logout-all` - Logout all sessions
+- `GET /api/v1/user/profile` - Get user profile
+- `PUT /api/v1/user/profile` - Update user profile
+- `POST /api/v1/auth/change-password` - Change password
+- `GET /api/v1/email-verification/status` - Check email verification status
+- `POST /api/v1/email-verification/resend` - Resend verification email
+- `POST /api/v1/email-verification/verify` - Verify email with token
+- `POST /api/v1/email-verification/request-password-reset` - Request password reset
+- `POST /api/v1/email-verification/reset-password` - Reset password with token
 
 ## Security Features
 
@@ -202,7 +219,8 @@ Uses AsyncLocalStorage to maintain request context across async operations:
 
 - Services: `*.service.js` in `src/services/`
 - Controllers: `*.controller.js` in `src/controllers/`
-- Routes: `*.route.js` in `src/routes/`
+- Routes: `*.route.js` in `src/routes/v{N}/` (versioned)
+- Version Aggregators: `index.js` in `src/routes/v{N}/`
 - Validators: `*.validator.js` in `src/validators/`
 - Models: `*.model.js` in `src/models/`
 
@@ -213,8 +231,14 @@ Follow this pattern when adding new API endpoints:
 1. Create Joi validation schema in `src/validators/`
 2. Create service in `src/services/` (business logic + db.util calls)
 3. Create controller in `src/controllers/` (request/response handling)
-4. Create route in `src/routes/` (define endpoints + middleware)
-5. Import route in `src/routes/routes.js`
+4. Create route in `src/routes/v1/` (define endpoints + middleware)
+5. Import route in `src/routes/v1/index.js`
+6. Main routes are auto-mounted via `src/routes/routes.js`
+
+**Important:**
+- All new routes go into `src/routes/v1/` (or current version)
+- Use `../../` for imports when in version subdirectories (e.g., `../../controllers/`)
+- Health check stays in `src/routes/routes.js` (no version)
 
 ## Testing Strategy
 
@@ -255,7 +279,27 @@ See `.env.example` for all available configuration options including:
 
 ## Route Registration
 
-Add new routes in `src/routes/` then import in `src/routes/routes.js`. All routes mounted under `/api` prefix.
+**Current Structure (v1):**
+```
+src/routes/
+├── routes.js           # Main aggregator (mounts /api prefix)
+└── v1/
+    ├── index.js          # v1 aggregator (mounts /v1)
+    ├── auth.route.js
+    ├── user.route.js
+    └── email-verification.route.js
+```
+
+**Adding Routes to v1:**
+1. Create route file in `src/routes/v1/`
+2. Import in `src/routes/v1/index.js`
+3. Use `../../` for imports (e.g., `../../controllers/`)
+
+**Adding New Versions:**
+1. Create `src/routes/v2/` directory
+2. Copy/adapt routes from v1
+3. Create `src/routes/v2/index.js`
+4. Add to `src/routes/routes.js`: `router.use('/v2', v2Routes);`
 
 ## Important Gotchas
 

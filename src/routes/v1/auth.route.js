@@ -6,11 +6,11 @@
 
 import express from 'express';
 const router = express.Router();
-import * as authController from '../controllers/auth.controller.js';
-import { authenticate } from '../middleware/auth.middleware.js';
-import { validateRegistration, validateLogin, validateRefreshToken, validateChangePassword } from '../validators/auth.validator.js';
-import { rateLimitDB } from '../middleware/rate-limit-db.middleware.js';
-import { AUTH_RATE_LIMIT_WINDOW_MS, AUTH_RATE_LIMIT_MAX_REQUESTS } from '../config/time.constants.js';
+import * as authController from '../../controllers/auth.controller.js';
+import { authenticate } from '../../middleware/auth.middleware.js';
+import { validateRegistration, validateLogin, validateRefreshToken, validateChangePassword } from '../../validators/auth.validator.js';
+import { rateLimitDB } from '../../middleware/rate-limit-db.middleware.js';
+import { AUTH_RATE_LIMIT_WINDOW_MS, AUTH_RATE_LIMIT_MAX_REQUESTS } from '../../config/time.constants.js';
 
 // Rate limiting: use configured attempts per configured window for auth endpoints
 const authRateLimit = rateLimitDB({

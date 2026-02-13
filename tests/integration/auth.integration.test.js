@@ -55,7 +55,7 @@ describe('Authentication Integration Tests', () => {
     jest.restoreAllMocks();
   });
 
-  describe('POST /api/auth/register', () => {
+  describe('POST /api/v1/auth/register', () => {
     const validUserData = {
       username: 'testuser',
       email: 'test@example.com',
@@ -97,7 +97,7 @@ describe('Authentication Integration Tests', () => {
       UserToken.create = jest.fn().mockResolvedValue({});
 
       const response = await request(app)
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send(validUserData)
         .expect(200);
 
@@ -121,7 +121,7 @@ describe('Authentication Integration Tests', () => {
       };
 
       const response = await request(app)
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send(invalidData)
         .expect(422);
 
@@ -143,7 +143,7 @@ describe('Authentication Integration Tests', () => {
       User.findOne = jest.fn().mockResolvedValue(existingUser);
 
       const response = await request(app)
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send(validUserData)
         .expect(400);
 
@@ -154,7 +154,7 @@ describe('Authentication Integration Tests', () => {
     });
   });
 
-  describe('POST /api/auth/login', () => {
+  describe('POST /api/v1/auth/login', () => {
     test('should login user successfully and return JWT token', async () => {
       const validLoginData = {
         email: 'test@example.com',
@@ -189,7 +189,7 @@ describe('Authentication Integration Tests', () => {
       UserToken.create = jest.fn().mockResolvedValue({});
 
       const response = await request(app)
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send(validLoginData)
         .expect(200);
 
@@ -228,7 +228,7 @@ describe('Authentication Integration Tests', () => {
       User.findOne = jest.fn().mockResolvedValue(mockUser);
 
       const response = await request(app)
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send(loginData)
         .expect(400);
 
@@ -245,7 +245,7 @@ describe('Authentication Integration Tests', () => {
       };
 
       const response = await request(app)
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send(invalidData)
         .expect(422);
 
@@ -308,7 +308,7 @@ describe('Authentication Integration Tests', () => {
       });
 
       const response = await request(app)
-        .get('/api/user/profile')
+        .get('/api/v1/user/profile')
         .set('Authorization', authToken)
         .expect(200);
 
@@ -319,7 +319,7 @@ describe('Authentication Integration Tests', () => {
 
     test('should reject access to protected route without token', async () => {
       const response = await request(app)
-        .get('/api/user/profile')
+        .get('/api/v1/user/profile')
         .expect(400);
 
       expect(response.body).toMatchObject({
@@ -332,7 +332,7 @@ describe('Authentication Integration Tests', () => {
       UserToken.findOne = jest.fn().mockResolvedValue(null);
 
       const response = await request(app)
-        .get('/api/user/profile')
+        .get('/api/v1/user/profile')
         .set('Authorization', 'Bearer invalid_token')
         .expect(400);
 
@@ -393,7 +393,7 @@ describe('Authentication Integration Tests', () => {
       });
 
       const response = await request(app)
-        .put('/api/user/profile')
+        .put('/api/v1/user/profile')
         .set('Authorization', authToken)
         .send(updateData)
         .expect(200);
@@ -426,7 +426,7 @@ describe('Authentication Integration Tests', () => {
       UserToken.findOne = jest.fn().mockResolvedValue(mockTokenRecord);
 
       const response = await request(app)
-        .post('/api/auth/logout')
+        .post('/api/v1/auth/logout')
         .set('Authorization', authToken)
         .expect(200);
 
@@ -466,7 +466,7 @@ describe('Authentication Integration Tests', () => {
 
     test('should handle malformed JSON in request body', async () => {
       const response = await request(app)
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .set('Content-Type', 'application/json')
         .send('invalid json')
         .expect(400);
