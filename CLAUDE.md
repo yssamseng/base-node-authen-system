@@ -70,7 +70,50 @@ Response codes (`resCode`) are defined in `src/config/constants.js` - first 3 di
 - `src/utils/jwt.util.js`: Token generation and verification with type checking (`access` vs `refresh`)
 - `src/utils/app-logger.util.js`: Structured logging with trace data support (see Logging Architecture below)
 - `src/utils/trace.util.js`: AsyncLocalStorage for request correlation tracking
+- `src/utils/sanitize.util.js`: Input sanitization utilities (XSS prevention, SQL injection protection, etc.)
+- `src/middleware/sanitize.middleware.js`: Automatic request body/query/params sanitization middleware
 - `src/validators/`: Joi schemas - validate before service layer
+
+### Input Sanitization Usage
+
+**Available sanitization functions:**
+```javascript
+import {
+  sanitizeString,
+  sanitizeHTML,
+  sanitizeEmail,
+  sanitizeUsername,
+  sanitizePath,
+  sanitizeSQL,
+  sanitizeNoSQL,
+  sanitizeObject,
+  sanitizeRequestBody,
+  sanitizeURL,
+  stripTags
+} from './utils/sanitize.util.js';
+```
+
+**Using sanitization middleware:**
+```javascript
+import { sanitizeAll } from './middleware/sanitize.middleware.js';
+
+// Apply to all routes (comprehensive sanitization)
+router.use(sanitizeAll);
+
+// Or apply selectively
+router.use(sanitizeBody);  // Body only
+router.use(sanitizeQuery);  // Query params only
+router.use(sanitizeParams);  // URL params only
+```
+
+**Manual sanitization in controllers/services:**
+```javascript
+import { sanitizeString, sanitizeHTML } from './utils/sanitize.util.js';
+
+// Sanitize user input
+const cleanInput = sanitizeString(userInput);
+const safeHTML = sanitizeHTML(userContent);
+```
 
 ### Response Handling Pattern
 Controllers use this pattern for all responses (see `src/core/handler.js`):
@@ -214,6 +257,41 @@ All API endpoints use versioning: `/api/v1/...`
 - **Session Management**: Max 2 active sessions per user, device tracking, oldest session revoked when limit exceeded
 - **Token Storage**: Tokens stored in database for revocation capability
 - **Request Correlation**: Transaction IDs via `x-transaction-id` header for security monitoring (see Logging Architecture)
+- **Input Sanitization**: Utilities available in `src/utils/sanitize.util.js` for preventing XSS, injection attacks
+
+### Input Sanitization (Optional)
+
+**Note:** Sanitization middleware is available but **NOT enabled by default**. Use selectively based on your security requirements.
+
+**Available Middleware:**
+- `src/middleware/sanitize.middleware.js`
+  - `sanitizeBody` - Sanitize request body (POST/PUT)
+  - `sanitizeQuery` - Sanitize query parameters (?key=value)
+  - `sanitizeParams` - Sanitize URL parameters (/user/:id)
+  - `sanitizeAll` - Apply all sanitizers (comprehensive)
+
+**How to Enable:**
+```javascript
+// Option 1: Apply to all routes (comprehensive)
+import { sanitizeAll } from './middleware/sanitize.middleware.js';
+router.use(sanitizeAll);
+
+// Option 2: Apply selectively
+import { sanitizeBody } from './middleware/sanitize.middleware.js';
+router.post('/api/v1/user/profile', sanitizeBody, userProfileController.updateProfile);
+```
+
+**Trade-offs:**
+- ⚠️ **Performance**: Additional processing on every request
+- ⚠️ **Trimming**: Strings are trimmed automatically (may affect user input)
+- ⚠️ **Over-sanitization**: May sanitize legitimate content (edge cases)
+- ⚠️ **Double Processing**: Joi validates + sanitization = duplicate work
+
+**Best Practices:**
+- ✅ Use for **external/untrusted input**: search params, user content, comments
+- ✅ Use **selectively** based on route sensitivity
+- ❌ **Avoid** for **Joi-validated fields**: credentials, emails already validated
+- ❌ **Avoid** for **internal/trusted data**: database records, system data
 
 ## File Naming Conventions
 
