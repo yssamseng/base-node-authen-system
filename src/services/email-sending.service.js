@@ -7,6 +7,7 @@
 import nodemailer from 'nodemailer';
 import APP_CONFIG from '../config/app-config.js';
 import { appLogger } from '../utils/app-logger.util.js';
+import { getVerificationEmailTemplate, getPasswordResetEmailTemplate } from '../templates/email.template.js';
 
 /**
  * Email service class for sending emails via SMTP or Gmail
@@ -168,10 +169,8 @@ class EmailService {
    */
   async sendVerificationEmail(to, verificationToken, userName = null) {
     const verificationUrl = `${this.frontendUrl}/verify-email?token=${verificationToken}`;
-
     const subject = 'Verify Your Email Address';
-    const html = this.getVerificationEmailTemplate(userName, verificationUrl);
-
+    const html = getVerificationEmailTemplate(userName, verificationUrl).replace('{{APP_NAME}}', this.fromName);
     return await this.sendEmail(to, subject, html);
   }
 
@@ -180,194 +179,9 @@ class EmailService {
    */
   async sendPasswordResetEmail(to, resetToken, userName = null) {
     const resetUrl = `${this.frontendUrl}/reset-password?token=${resetToken}`;
-
     const subject = 'Reset Your Password';
-    const html = this.getPasswordResetEmailTemplate(userName, resetUrl);
-
+    const html = getPasswordResetEmailTemplate(userName, resetUrl).replace('{{APP_NAME}}', this.fromName);
     return await this.sendEmail(to, subject, html);
-  }
-
-  getVerificationEmailTemplate(userName, verificationUrl) {
-    const greeting = userName ? `Hi ${userName},` : 'Hello,';
-
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Email Verification</title>
-        <style>
-          body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f4f4f4;
-          }
-          .container {
-            background-color: white;
-            border-radius: 10px;
-            padding: 30px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-          }
-          .header {
-            text-align: center;
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-          }
-          .button {
-            display: inline-block;
-            padding: 12px 24px;
-            background-color: #007bff;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            margin: 20px 0;
-          }
-          .button:hover {
-            background-color: #0056b3;
-          }
-          .footer {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-            font-size: 12px;
-            color: #666;
-            text-align: center;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>Verify Your Email Address</h1>
-          </div>
-
-          <p>${greeting}</p>
-          <p>Thank you for registering! To complete your registration and activate your account, please verify your email address by clicking the button below:</p>
-
-          <div style="text-align: center;">
-            <a href="${verificationUrl}" class="button">Verify Email Address</a>
-          </div>
-
-          <p>Or copy and paste this link into your browser:</p>
-          <p style="word-break: break-all; background-color: #f8f9fa; padding: 10px; border-radius: 5px;">${verificationUrl}</p>
-
-          <p><strong>Important:</strong></p>
-          <ul>
-            <li>This verification link will expire in <strong>24 hours</strong>.</li>
-            <li>If you didn't create an account, you can safely ignore this email.</li>
-          </ul>
-
-          <div class="footer">
-            <p>This is an automated message. Please do not reply to this email.</p>
-            <p>&copy; ${new Date().getFullYear()} ${this.fromName}. All rights reserved.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-  }
-
-  getPasswordResetEmailTemplate(userName, resetUrl) {
-    const greeting = userName ? `Hi ${userName},` : 'Hello,';
-
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Password Reset</title>
-        <style>
-          body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f4f4f4;
-          }
-          .container {
-            background-color: white;
-            border-radius: 10px;
-            padding: 30px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-          }
-          .header {
-            text-align: center;
-            border-bottom: 2px solid #dc3545;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-          }
-          .button {
-            display: inline-block;
-            padding: 12px 24px;
-            background-color: #dc3545;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            margin: 20px 0;
-          }
-          .button:hover {
-            background-color: #c82333;
-          }
-          .warning {
-            background-color: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 20px 0;
-          }
-          .footer {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-            font-size: 12px;
-            color: #666;
-            text-align: center;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>Reset Your Password</h1>
-          </div>
-
-          <p>${greeting}</p>
-          <p>We received a request to reset your password. If you made this request, click the button below to reset your password:</p>
-
-          <div style="text-align: center;">
-            <a href="${resetUrl}" class="button">Reset Password</a>
-          </div>
-
-          <p>Or copy and paste this link into your browser:</p>
-          <p style="word-break: break-all; background-color: #f8f9fa; padding: 10px; border-radius: 5px;">${resetUrl}</p>
-
-          <div class="warning">
-            <strong>Security Notice:</strong>
-            <ul>
-              <li>This reset link will expire in <strong>1 hour</strong>.</li>
-              <li>If you didn't request this password reset, please ignore this email.</li>
-              <li>Never share this link with anyone.</li>
-            </ul>
-          </div>
-
-          <div class="footer">
-            <p>This is an automated message. Please do not reply to this email.</p>
-            <p>&copy; ${new Date().getFullYear()} ${this.fromName}. All rights reserved.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
   }
 
   /**

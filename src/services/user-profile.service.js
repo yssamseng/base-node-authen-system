@@ -6,9 +6,10 @@
 
 import { genErrorResponseObj } from '../core/handler.js';
 import { RES_CODE } from '../config/constants.js';
-import moment from 'moment';
 import models from '../models/model.js';
 import { findOne, update } from '../utils/db.util.js';
+import { formatDateTime, formatDateOnly } from '../utils/date.util.js';
+
 const { User, UserAuth } = models;
 
 /**
@@ -36,8 +37,8 @@ const getProfile = async (req) => {
 
   return {
     user: user.toJSON(),
-    lastLogin: user.auth?.lastLogin ? moment(user.auth.lastLogin).format('YYYY-MM-DD HH:mm:ss') : null,
-    memberSince: moment(user.createdAt).format('YYYY-MM-DD'),
+    lastLogin: user.auth?.lastLogin ? formatDateTime(user.auth.lastLogin) : null,
+    memberSince: formatDateOnly(user.createdAt),
     isVerified: user.auth?.isVerified || false
   };
 };
@@ -74,7 +75,7 @@ const updateProfile = async (req) => {
 
   return {
     user: updatedUser.toJSON(),
-    updatedAt: moment(updatedUser.updatedAt).format('YYYY-MM-DD HH:mm:ss')
+    updatedAt: formatDateTime(updatedUser.updatedAt)
   };
 };
 

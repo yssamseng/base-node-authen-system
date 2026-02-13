@@ -8,10 +8,12 @@ import { genErrorResponseObj } from '../core/handler.js';
 import { RES_CODE } from '../config/constants.js';
 import { generateEmailVerificationToken } from '../utils/token.util.js';
 import { generatePasswordResetToken } from '../utils/token.util.js';
-import moment from 'moment';
 import models from '../models/model.js';
+import { findOne } from '../utils/db.util.js';
 import EmailSendingService from './email-sending.service.js';
 import emailVerifyConfig from '../utils/email-verify-config.util.js';
+import { formatDateTime, now } from '../utils/date.util.js';
+import { findUserWithAuth, getDisplayName } from './user.service.js';
 
 const { User, UserAuth } = models;
 
@@ -22,13 +24,7 @@ const resendVerificationEmail = async (req) => {
   const { email } = req.body;
 
   // Find user with auth data
-  const user = await User.findOne({
-    where: { email },
-    include: [{
-      model: UserAuth,
-      as: 'auth'
-    }]
-  });
+  const user = await findUserWithAuth(User, UserAuth, { email });
 
   if (!user) {
     throw genErrorResponseObj(req, RES_CODE.USER_NOT_FOUND, 'User not found');
@@ -50,10 +46,10 @@ const resendVerificationEmail = async (req) => {
 
   // Check if there's a recent verification email sent (cooldown)
   if (userAuth.emailVerificationExpiresAt) {
-    const timeSinceLastSent = moment().diff(
-      moment(userAuth.emailVerificationExpiresAt).subtract(emailVerifyConfig.getTokenExpirationHours(), 'hours'),
-      'milliseconds'
-    );
+    const expiresAtTime = userAuth.emailVerificationExpiresAt.getTime();
+    const tokenExpirationMs = emailVerifyConfig.getTokenExpirationHours() * 60 * 60 * 1000;
+    const timeSent = expiresAtTime - tokenExpirationMs;
+    const timeSinceLastSent = Date.now() - timeSent;
 
     if (timeSinceLastSent < emailVerifyConfig.getResendCooldownMs()) {
       const remainingCooldown = Math.ceil(
@@ -76,7 +72,7 @@ const resendVerificationEmail = async (req) => {
     await EmailSendingService.sendVerificationEmail(
       email,
       emailVerification.token,
-      `${user.firstName} ${user.lastName}`.trim() || user.username
+      getDisplayName(user)
     );
   } catch (emailError) {
     // Email sending is handled by EmailSendingService with appLogger
@@ -99,9 +95,9 @@ const verifyEmail = async (req) => {
     throw genErrorResponseObj(req, RES_CODE.VERIFICATION_TOKEN_REQUIRED, 'Verification token is required');
   }
 
-  // Find user by verification token
-  const userAuth = await UserAuth.findOne({
-    where: {
+  // Find user by verification token (using db.util)
+  const userAuth = await findOne(UserAuth, {
+    criteria: {
       emailVerificationToken: token
     },
     include: [{
@@ -130,7 +126,7 @@ const verifyEmail = async (req) => {
   return {
     message: 'Email verified successfully',
     email: userAuth.user.email,
-    verifiedAt: moment().format('YYYY-MM-DD HH:mm:ss')
+    verifiedAt: formatDateTime(now())
   };
 };
 
@@ -142,13 +138,7 @@ const requestPasswordReset = async (req) => {
   const { email } = req.body;
 
   // Find user with auth data
-  const user = await User.findOne({
-    where: { email },
-    include: [{
-      model: UserAuth,
-      as: 'auth'
-    }]
-  });
+  const user = await findUserWithAuth(User, UserAuth, { email });
 
   // Always return success to prevent email enumeration attacks
   if (!user) {
@@ -184,7 +174,7 @@ const requestPasswordReset = async (req) => {
     await EmailSendingService.sendPasswordResetEmail(
       email,
       passwordReset.token,
-      `${user.firstName} ${user.lastName}`.trim() || user.username
+      getDisplayName(user)
     );
   } catch (emailError) {
     // Email sending is handled by EmailSendingService with appLogger
@@ -207,9 +197,9 @@ const resetPassword = async (req) => {
     throw genErrorResponseObj(req, RES_CODE.PASSWORD_RESET_REQUIRED, 'Reset token and new password are required');
   }
 
-  // Find user by reset token
-  const userAuth = await UserAuth.findOne({
-    where: {
+  // Find user by reset token (using db.util)
+  const userAuth = await findOne(UserAuth, {
+    criteria: {
       passwordResetToken: token
     },
     include: [{
@@ -241,7 +231,7 @@ const resetPassword = async (req) => {
   return {
     message: 'Password reset successfully',
     email: userAuth.user.email,
-    resetAt: moment().format('YYYY-MM-DD HH:mm:ss')
+    resetAt: formatDateTime(now())
   };
 };
 
@@ -255,8 +245,8 @@ const checkVerificationStatus = async (req) => {
 
   const userId = req.user.id;
 
-  const userAuth = await UserAuth.findOne({
-    where: { userId },
+  const userAuth = await findOne(UserAuth, {
+    criteria: { userId },
     include: [{
       model: User,
       as: 'user',
@@ -274,7 +264,7 @@ const checkVerificationStatus = async (req) => {
     emailVerificationEnabled: emailVerifyConfig.isEnabled(),
     loginVerificationRequired: emailVerifyConfig.isLoginVerificationRequired(),
     ...(userAuth.emailVerificationExpiresAt && !userAuth.isVerified && {
-      verificationExpiresAt: moment(userAuth.emailVerificationExpiresAt).format('YYYY-MM-DD HH:mm:ss')
+      verificationExpiresAt: formatDateTime(userAuth.emailVerificationExpiresAt)
     })
   };
 };

@@ -28,6 +28,15 @@ const getTraceData = () => {
  */
 export const appLogger = {
   /**
+   * Log to console only (no file logging)
+   * For startup messages and temporary debugging
+   * Does NOT write to log files or Logtail
+   */
+  logConsole: (message = '') => {
+    console.log(message);
+  },
+
+  /**
    * Log fatal/critical error message with trace data
    * For critical errors that cause service failure
    * Uses Syslog CRIT level with FATAL type

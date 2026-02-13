@@ -1,6 +1,6 @@
 import { DataTypes, Model, Op } from 'sequelize';
 import { sequelize } from '../config/database.js';
-import moment from 'moment';
+import { RATE_LIMIT_CLEANUP_MS, RATE_LIMIT_STATS_WINDOW_MS } from '../config/time.constants.js';
 
 /**
  * RateLimit Model
@@ -26,8 +26,8 @@ class RateLimit extends Model {
    * @returns {Promise<{allowed: boolean, remaining: number, resetAt: Date, count: number}>}
    */
   static async checkRateLimit(key, maxRequests, windowMs) {
-    const now = moment().toDate();
-    const windowStart = moment().subtract(windowMs, 'milliseconds').toDate();
+    const now = new Date();
+    const windowStart = new Date(Date.now() - windowMs);
 
     // Clean up old records for this key
     await RateLimit.destroy({
@@ -46,7 +46,7 @@ class RateLimit extends Model {
     });
 
     const remaining = Math.max(0, maxRequests - count - 1);
-    const resetAt = moment().add(windowMs, 'milliseconds').toDate();
+    const resetAt = new Date(Date.now() + windowMs);
     const allowed = count < maxRequests;
 
     // If allowed, record this request
@@ -76,11 +76,11 @@ class RateLimit extends Model {
    * Clean up old rate limit records
    * Should be run periodically (e.g., via cron job)
    * @static
-   * @param {number} hoursOld - Delete records older than this many hours (default: 1)
+   * @param {number} hoursOld - Delete records older than this many hours (default: from config)
    * @returns {Promise<number>} Number of deleted records
    */
-  static async cleanupOldRecords(hoursOld = 1) {
-    const cutoffDate = moment().subtract(hoursOld, 'hours').toDate();
+  static async cleanupOldRecords(hoursOld = RATE_LIMIT_CLEANUP_MS / (60 * 60 * 1000)) {
+    const cutoffDate = new Date(Date.now() - hoursOld * 60 * 60 * 1000);
     const deletedCount = await RateLimit.destroy({
       where: {
         createdAt: { [Op.lt]: cutoffDate }
@@ -96,7 +96,7 @@ class RateLimit extends Model {
    * @returns {Promise<{total: number, last24h: number, lastRequestAt: Date}>}
    */
   static async getStats(key) {
-    const last24h = moment().subtract(24, 'hours').toDate();
+    const last24h = new Date(Date.now() - RATE_LIMIT_STATS_WINDOW_MS);
 
     const [total, last24hCount, lastRequest] = await Promise.all([
       RateLimit.count({ where: { key } }),

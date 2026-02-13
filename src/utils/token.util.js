@@ -1,5 +1,11 @@
 import crypto from 'crypto';
-import moment from 'moment';
+import { isFuture, formatDateTime } from './date.util.js';
+import {
+  EMAIL_VERIFY_EXPIRATION_MS,
+  EMAIL_VERIFY_EXPIRATION_SEC,
+  PASSWORD_RESET_EXPIRATION_MS,
+  PASSWORD_RESET_EXPIRATION_SEC
+} from '../config/time.constants.js';
 
 /**
  * Generate random token
@@ -16,12 +22,12 @@ export const generateRandomToken = (length = 32) => {
  */
 export const generateEmailVerificationToken = () => {
   const token = generateRandomToken(32);
-  const expiresAt = moment().add(24, 'hours').toDate(); // 24 hours from now
+  const expiresAt = new Date(Date.now() + EMAIL_VERIFY_EXPIRATION_MS);
 
   return {
     token,
     expiresAt,
-    expiresIn: 24 * 60 * 60 // 24 hours in seconds
+    expiresIn: EMAIL_VERIFY_EXPIRATION_SEC
   };
 };
 
@@ -31,12 +37,12 @@ export const generateEmailVerificationToken = () => {
  */
 export const generatePasswordResetToken = () => {
   const token = generateRandomToken(32);
-  const expiresAt = moment().add(1, 'hour').toDate(); // 1 hour from now
+  const expiresAt = new Date(Date.now() + PASSWORD_RESET_EXPIRATION_MS);
 
   return {
     token,
     expiresAt,
-    expiresIn: 60 * 60 // 1 hour in seconds
+    expiresIn: PASSWORD_RESET_EXPIRATION_SEC
   };
 };
 
@@ -47,7 +53,7 @@ export const generatePasswordResetToken = () => {
  */
 export const isTokenExpired = (expiresAt) => {
   if (!expiresAt) return true;
-  return moment().isAfter(moment(expiresAt));
+  return !isFuture(expiresAt);
 };
 
 /**
@@ -57,9 +63,9 @@ export const isTokenExpired = (expiresAt) => {
  */
 export const getTokenTimeRemaining = (expiresAt) => {
   if (!expiresAt) return 0;
-  const now = moment();
-  const expiry = moment(expiresAt);
-  return Math.max(0, expiry.diff(now, 'seconds'));
+  const now = Date.now();
+  const expiryTime = expiresAt instanceof Date ? expiresAt.getTime() : new Date(expiresAt).getTime();
+  return Math.max(0, Math.floor((expiryTime - now) / 1000));
 };
 
 /**
@@ -67,7 +73,4 @@ export const getTokenTimeRemaining = (expiresAt) => {
  * @param {Date|string} expiresAt - Expiration date
  * @returns {string|null} Formatted date string or null
  */
-export const formatExpirationTime = (expiresAt) => {
-  if (!expiresAt) return null;
-  return moment(expiresAt).format('YYYY-MM-DD HH:mm:ss');
-};
+export const formatExpirationTime = formatDateTime;

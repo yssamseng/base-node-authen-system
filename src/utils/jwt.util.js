@@ -1,5 +1,4 @@
 import jwt from 'jsonwebtoken';
-import moment from 'moment';
 import APP_CONFIG from '../config/app-config.js';
 
 const { secret, accessExpire, refreshSecret, refreshExpire } = APP_CONFIG.jwt;
@@ -123,7 +122,7 @@ const verifyToken = (token) => {
 const getTokenExpiration = (token) => {
   try {
     const decoded = jwt.decode(token, { complete: true });
-    return moment(decoded.payload.exp * 1000).toDate();
+    return new Date(decoded.payload.exp * 1000);
   } catch (error) {
     return null;
   }

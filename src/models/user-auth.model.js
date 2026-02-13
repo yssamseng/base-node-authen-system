@@ -1,7 +1,7 @@
 import { DataTypes, Model } from 'sequelize';
 import bcrypt from 'bcryptjs';
 import { sequelize } from '../config/database.js';
-import moment from 'moment';
+import { MAX_FAILED_ATTEMPTS, LOCK_DURATION_MS } from '../config/time.constants.js';
 
 /**
  * UserAuth Model
@@ -40,7 +40,7 @@ class UserAuth extends Model {
     if (!this.lockedUntil) {
       return false;
     }
-    return moment().isBefore(this.lockedUntil);
+    return new Date() < this.lockedUntil;
   }
 
   /**
@@ -51,10 +51,9 @@ class UserAuth extends Model {
   async incrementFailedAttempts() {
     this.failedAttempts += 1;
 
-    // Lock account after 5 failed attempts for 30 minutes
-    if (this.failedAttempts >= 5) {
-      const lockDuration = 30 * 60 * 1000; // 30 minutes in milliseconds
-      this.lockedUntil = moment().add(lockDuration, 'milliseconds').toDate();
+    // Lock account after max failed attempts
+    if (this.failedAttempts >= MAX_FAILED_ATTEMPTS) {
+      this.lockedUntil = new Date(Date.now() + LOCK_DURATION_MS);
     }
 
     await this.save();
@@ -79,7 +78,7 @@ class UserAuth extends Model {
     if (!this.emailVerificationExpiresAt) {
       return true;
     }
-    return moment().isAfter(this.emailVerificationExpiresAt);
+    return new Date() > this.emailVerificationExpiresAt;
   }
 
   /**
@@ -90,7 +89,7 @@ class UserAuth extends Model {
     if (!this.passwordResetExpiresAt) {
       return true;
     }
-    return moment().isAfter(this.passwordResetExpiresAt);
+    return new Date() > this.passwordResetExpiresAt;
   }
 
   /**

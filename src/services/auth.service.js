@@ -8,12 +8,126 @@ import { genErrorResponseObj } from '../core/handler.js';
 import { generateTokenPair, getTokenExpiration } from '../utils/jwt.util.js';
 import { generateEmailVerificationToken } from '../utils/token.util.js';
 import { RES_CODE } from '../config/constants.js';
-import moment from 'moment';
 import models from '../models/model.js';
-import { findOne, create } from '../utils/db.util.js';
+import { findOne, create, update } from '../utils/db.util.js';
 import EmailSendingService from './email-sending.service.js';
 import emailVerifyConfig from '../utils/email-verify-config.util.js';
+import { formatDateTime, getExpiresInSec, now } from '../utils/date.util.js';
+import { findUserWithAuth, getDisplayName } from './user.service.js';
+
 const { User, UserAuth, UserToken } = models;
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Validate that email and username are not already taken
+ * @param {string} email - User email
+ * @param {string} username - Username
+ * @param {Object} req - Request object for error generation
+ * @throws {Error} If email or username already exists
+ */
+const validateUserExists = async (email, username, req) => {
+  const existingUser = await findOne(User, { criteria: { email } });
+  if (existingUser) {
+    throw genErrorResponseObj(req, RES_CODE.EMAIL_ALREADY_EXISTS, 'User with this email already exists');
+  }
+
+  const existingUsername = await findOne(User, { criteria: { username } });
+  if (existingUsername) {
+    throw genErrorResponseObj(req, RES_CODE.USERNAME_ALREADY_EXISTS, 'Username is already taken');
+  }
+};
+
+/**
+ * Create user authentication record
+ * @param {number} userId - User ID
+ * @param {string} password - Plain text password
+ * @param {Object} emailVerification - Email verification token data
+ * @param {Object} transaction - Database transaction
+ * @returns {Promise<void>}
+ */
+const createUserAuthRecord = async (userId, password, emailVerification, transaction) => {
+  await create(UserAuth, {
+    data: {
+      userId,
+      password,
+      isVerified: !emailVerifyConfig.isEnabled(),
+      ...(emailVerification && {
+        emailVerificationToken: emailVerification.token,
+        emailVerificationExpiresAt: emailVerification.expiresAt
+      })
+    },
+    transaction
+  });
+};
+
+/**
+ * Create user token record
+ * @param {number} userId - User ID
+ * @param {Object} tokenPair - JWT token pair
+ * @param {string} deviceInfo - Device user agent info
+ * @param {Object} transaction - Database transaction
+ * @returns {Promise<void>}
+ */
+const createUserTokenRecord = async (userId, tokenPair, deviceInfo, transaction) => {
+  await create(UserToken, {
+    data: {
+      userId,
+      accessToken: tokenPair.accessToken,
+      refreshToken: tokenPair.refreshToken,
+      accessTokenExpiresAt: getTokenExpiration(tokenPair.accessToken),
+      refreshTokenExpiresAt: getTokenExpiration(tokenPair.refreshToken),
+      deviceInfo: deviceInfo ? { userAgent: deviceInfo } : null
+    },
+    transaction
+  });
+};
+
+/**
+ * Send verification email to user
+ * @param {string} email - User email
+ * @param {string} token - Verification token
+ * @param {string} displayName - User display name
+ */
+const sendVerificationEmail = async (email, token, displayName) => {
+  try {
+    await EmailSendingService.sendVerificationEmail(email, token, displayName);
+  } catch (emailError) {
+    // Email sending is handled by EmailSendingService with appLogger
+    // Continue with registration even if email fails
+  }
+};
+
+/**
+ * Build registration response object
+ * @param {Object} user - User model instance
+ * @param {Object} tokenPair - JWT token pair
+ * @returns {Object} Registration response
+ */
+const buildRegistrationResponse = (user, tokenPair) => {
+  return {
+    user: user.toJSON(),
+    accessToken: tokenPair.accessToken,
+    refreshToken: tokenPair.refreshToken,
+    expiresIn: getExpiresInSec(getTokenExpiration(tokenPair.accessToken)),
+    isVerified: !emailVerifyConfig.isEnabled(),
+    ...(emailVerifyConfig.isEnabled() && {
+      message: 'Registration successful. Please check your email to verify your account.'
+    })
+  };
+};
+
+/**
+ * Get device info from request headers
+ * @param {Object} headers - Request headers
+ * @returns {Object|null} Device info object or null
+ */
+const getDeviceInfo = (headers) => {
+  const userAgent = headers?.['user-agent'];
+  return userAgent ? { userAgent } : null;
+};
 
 /**
  * Register a new user
@@ -22,98 +136,41 @@ const { User, UserAuth, UserToken } = models;
 const register = async (req, transaction) => {
   const { username, email, password, firstName, lastName } = req.body;
 
-  // Check if user already exists
-  const existingUser = await findOne(User, { criteria: { email } });
+  // Validate email and username uniqueness
+  await validateUserExists(email, username, req);
 
-  if (existingUser) {
-    throw genErrorResponseObj(req, RES_CODE.EMAIL_ALREADY_EXISTS, 'User with this email already exists');
+  // Create new user
+  const user = await create(User, {
+    data: {
+      username,
+      email,
+      firstName,
+      lastName
+    },
+    transaction
+  });
+
+  // Generate email verification token if enabled
+  const emailVerification = emailVerifyConfig.isEnabled()
+    ? generateEmailVerificationToken()
+    : null;
+
+  // Create user auth record
+  await createUserAuthRecord(user.id, password, emailVerification, transaction);
+
+  // Generate token pair
+  const tokenPair = generateTokenPair(user.id);
+
+  // Create user token record
+  await createUserTokenRecord(user.id, tokenPair, getDeviceInfo(req.headers), transaction);
+
+  // Send verification email if enabled
+  if (emailVerification) {
+    const displayName = getDisplayName({ firstName, lastName, username });
+    await sendVerificationEmail(email, emailVerification.token, displayName);
   }
 
-  // Check if username is taken
-  const existingUsername = await findOne(User, { criteria: { username } });
-
-  if (existingUsername) {
-    throw genErrorResponseObj(req, RES_CODE.USERNAME_ALREADY_EXISTS, 'Username is already taken');
-  }
-
-  try {
-    // Create new user
-    const user = await create(User, {
-      data: {
-        username,
-        email,
-        firstName,
-        lastName
-      },
-      transaction
-    });
-
-    let emailVerification = null;
-
-    // Generate email verification token only if feature is enabled
-    if (emailVerifyConfig.isEnabled()) {
-      emailVerification = generateEmailVerificationToken();
-    }
-
-    // Create user auth record
-    await create(UserAuth, {
-      data: {
-        userId: user.id,
-        password,
-        isVerified: !emailVerifyConfig.isEnabled(), // Auto-verify if feature is disabled
-        ...(emailVerification && {
-          emailVerificationToken: emailVerification.token,
-          emailVerificationExpiresAt: emailVerification.expiresAt
-        })
-      },
-      transaction
-    });
-
-    // Generate token pair
-    const tokenPair = generateTokenPair(user.id);
-
-    // Create user token record
-    await create(UserToken, {
-      data: {
-        userId: user.id,
-        accessToken: tokenPair.accessToken,
-        refreshToken: tokenPair.refreshToken,
-        accessTokenExpiresAt: getTokenExpiration(tokenPair.accessToken),
-        refreshTokenExpiresAt: getTokenExpiration(tokenPair.refreshToken),
-        deviceInfo: req.headers['user-agent'] ? { userAgent: req.headers['user-agent'] } : null
-      },
-      transaction
-    });
-
-    // Send verification email only if feature is enabled
-    if (emailVerification && emailVerifyConfig.isEnabled()) {
-      try {
-        await EmailSendingService.sendVerificationEmail(
-          email,
-          emailVerification.token,
-          `${firstName} ${lastName}`.trim() || username
-        );
-      } catch (emailError) {
-        // Email sending is handled by EmailSendingService with appLogger
-        // Continue with registration even if email fails
-      }
-    }
-
-    return {
-      user: user.toJSON(),
-      accessToken: tokenPair.accessToken,
-      refreshToken: tokenPair.refreshToken,
-      expiresIn: moment(getTokenExpiration(tokenPair.accessToken)).diff(moment(), 'seconds'),
-      isVerified: !emailVerifyConfig.isEnabled(),
-      ...(emailVerifyConfig.isEnabled() && {
-        message: emailVerifyConfig.isEnabled()
-          ? 'Registration successful. Please check your email to verify your account.'
-          : 'Registration successful.'
-      })
-    };
-  } catch (error) {
-    throw error;
-  }
+  return buildRegistrationResponse(user, tokenPair);
 };
 
 /**
@@ -124,13 +181,7 @@ const login = async (req) => {
   const { email, password } = req.body;
 
   // Find user by email with auth data
-  const user = await User.findOne({
-    where: { email },
-    include: [{
-      model: UserAuth,
-      as: 'auth'
-    }]
-  });
+  const user = await findUserWithAuth(User, UserAuth, { email });
 
   if (!user) {
     throw genErrorResponseObj(req, RES_CODE.INVALID_CREDENTIALS, 'Invalid email or password');
@@ -149,7 +200,7 @@ const login = async (req) => {
 
   // Check if account is locked
   if (userAuth.isLocked()) {
-    const lockedUntilFormatted = moment(userAuth.lockedUntil).format('YYYY-MM-DD HH:mm:ss');
+    const lockedUntilFormatted = formatDateTime(userAuth.lockedUntil);
     throw genErrorResponseObj(req, RES_CODE.ACCOUNT_LOCKED, `Account is locked until ${lockedUntilFormatted}`);
   }
 
@@ -170,31 +221,22 @@ const login = async (req) => {
   // Reset failed attempts on successful login
   await userAuth.resetFailedAttempts();
 
-  // Update last login time using moment
-  userAuth.lastLogin = moment().toDate();
+  // Update last login time
+  userAuth.lastLogin = now();
   await userAuth.save();
 
   // Generate token pair
   const tokenPair = generateTokenPair(user.id);
 
   // Create user token record
-  await create(UserToken, {
-    data: {
-      userId: user.id,
-      accessToken: tokenPair.accessToken,
-      refreshToken: tokenPair.refreshToken,
-      accessTokenExpiresAt: getTokenExpiration(tokenPair.accessToken),
-      refreshTokenExpiresAt: getTokenExpiration(tokenPair.refreshToken),
-      deviceInfo: req.headers['user-agent'] ? { userAgent: req.headers['user-agent'] } : null
-    }
-  });
+  await createUserTokenRecord(user.id, tokenPair, getDeviceInfo(req.headers));
 
   return {
     user: user.toJSON(),
     accessToken: tokenPair.accessToken,
     refreshToken: tokenPair.refreshToken,
-    expiresIn: moment(getTokenExpiration(tokenPair.accessToken)).diff(moment(), 'seconds'),
-    lastLogin: moment(userAuth.lastLogin).format('YYYY-MM-DD HH:mm:ss'),
+    expiresIn: getExpiresInSec(getTokenExpiration(tokenPair.accessToken)),
+    lastLogin: formatDateTime(userAuth.lastLogin),
     isVerified: userAuth.isVerified
   };
 };
@@ -208,9 +250,9 @@ const changePassword = async (req) => {
   const { currentPassword, newPassword } = req.body;
 
   try {
-    // Get user with auth data
-    const user = await User.findOne({
-      where: { id: userId },
+    // Get user with auth data (using db.util)
+    const user = await findOne(User, {
+      pk: userId,
       include: [{
         model: UserAuth,
         as: 'auth'
@@ -244,17 +286,17 @@ const changePassword = async (req) => {
  * Generates new token pair and updates expiry
  */
 const refreshToken = async (req) => {
-  const { refreshToken } = req.body;
+  const { refreshToken: refreshTokenBody } = req.body;
 
-  if (!refreshToken) {
+  if (!refreshTokenBody) {
     throw genErrorResponseObj(req, RES_CODE.AUTHENTICATION_REQUIRED, 'Refresh token is required');
   }
 
   try {
-    // Find the token record
-    const tokenRecord = await UserToken.findOne({
-      where: {
-        refreshToken,
+    // Find the token record (using db.util)
+    const tokenRecord = await findOne(UserToken, {
+      criteria: {
+        refreshToken: refreshTokenBody,
         isActive: true
       },
       include: [{
@@ -291,13 +333,13 @@ const refreshToken = async (req) => {
     tokenRecord.refreshToken = newTokenPair.refreshToken;
     tokenRecord.accessTokenExpiresAt = getTokenExpiration(newTokenPair.accessToken);
     tokenRecord.refreshTokenExpiresAt = getTokenExpiration(newTokenPair.refreshToken);
-    tokenRecord.lastUsedAt = moment().toDate();
+    tokenRecord.lastUsedAt = now();
     await tokenRecord.save();
 
     return {
       accessToken: newTokenPair.accessToken,
       refreshToken: newTokenPair.refreshToken,
-      expiresIn: moment(getTokenExpiration(newTokenPair.accessToken)).diff(moment(), 'seconds')
+      expiresIn: getExpiresInSec(getTokenExpiration(newTokenPair.accessToken))
     };
   } catch (error) {
     throw error;
@@ -312,7 +354,7 @@ const logout = async (req) => {
   if (!req.user) {
     return {
       message: 'Logged out successfully',
-      logoutTime: moment().format('YYYY-MM-DD HH:mm:ss')
+      logoutTime: formatDateTime(now())
     };
   }
 
@@ -321,9 +363,9 @@ const logout = async (req) => {
 
   if (token) {
     try {
-      // Find and revoke the specific token
-      const tokenRecord = await UserToken.findOne({
-        where: {
+      // Find and revoke the specific token (using db.util)
+      const tokenRecord = await findOne(UserToken, {
+        criteria: {
           userId,
           accessToken: token,
           isActive: true
@@ -340,7 +382,7 @@ const logout = async (req) => {
 
   return {
     message: 'Logged out successfully',
-    logoutTime: moment().format('YYYY-MM-DD HH:mm:ss')
+    logoutTime: formatDateTime(now())
   };
 };
 
@@ -352,21 +394,19 @@ const logoutAll = async (req) => {
   const userId = req.user.id;
 
   try {
-    // Revoke all active tokens for this user
-    const revokedCount = await UserToken.update(
-      { isActive: false },
-      {
-        where: {
-          userId,
-          isActive: true
-        }
+    // Revoke all active tokens for this user (using db.util)
+    const revokedCount = await update(UserToken, {
+      data: { isActive: false },
+      criteria: {
+        userId,
+        isActive: true
       }
-    );
+    });
 
     return {
       message: 'Logged out from all devices successfully',
       revokedSessions: revokedCount[0],
-      logoutTime: moment().format('YYYY-MM-DD HH:mm:ss')
+      logoutTime: formatDateTime(now())
     };
   } catch (error) {
     throw error;

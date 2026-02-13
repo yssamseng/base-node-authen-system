@@ -16,7 +16,7 @@ const { port: PORT, env: NODE_ENV } = APP_CONFIG.server;
 const logsDir = path.join(__dirname, '../logs');
 if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
-  console.log('Created logs directory');
+  appLogger.logConsole('Created logs directory');
 }
 
 /**
@@ -71,9 +71,9 @@ const startServer = async () => {
 
     // Start server
     const server = app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-      console.log(`Environment: ${NODE_ENV}`);
-      console.log(`API Base URL: http://localhost:${PORT}/api`);
+      appLogger.logConsole(`Server is running on port ${PORT}`);
+      appLogger.logConsole(`Environment: ${NODE_ENV}`);
+      appLogger.logConsole(`API Base URL: http://localhost:${PORT}/api`);
     });
 
     // Store server instance globally for graceful shutdown
@@ -82,7 +82,7 @@ const startServer = async () => {
     appLogger.logInfo(`Server started on port ${PORT} in ${NODE_ENV} mode`);
   } catch (error) {
     appLogger.logFatal('Failed to start server', error);
-    console.error('Failed to start server:', error);
+    appLogger.logConsole(`Failed to start server: ${error.message}`);
     process.exit(1);
   }
 };

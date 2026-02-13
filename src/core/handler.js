@@ -1,7 +1,7 @@
 // src/core/response.js
 import { appLogger } from '../utils/app-logger.util.js';
 import { resCodeMessagesMapping, RES_CODE } from '../config/constants.js';
-import moment from 'moment';
+import { nowIsoMs } from '../utils/date.util.js';
 
 /** ---------- Helpers ---------- **/
 
@@ -11,9 +11,6 @@ const toHttpStatus = (code) => {
   const n = Number.parseInt(s.slice(0, 3), 10);
   return Number.isFinite(n) ? n : 500;
 };
-
-/** ใช้ ISO string ที่มี ms โดยใช้ moment */
-const nowIsoMs = () => moment().toISOString();
 
 /** ดึง transactionId แบบปลอดภัย */
 const getTxnId = (req) =>

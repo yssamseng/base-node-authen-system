@@ -107,6 +107,48 @@ jest.mock('../src/config/database.js', () => ({
   connectDB: jest.fn().mockResolvedValue()
 }));
 
+// Mock db.util.js to pass through to model mocks
+jest.mock('../src/utils/db.util.js', () => ({
+  findOne: jest.fn((model, { pk, criteria, include, attributes, transaction } = {}) => {
+    const where = pk ? { id: pk } : criteria;
+    const options = {
+      where,
+      ...(include && include.length > 0 && { include }),
+      ...(attributes && { attributes }),
+      ...(transaction && { transaction })
+    };
+    return model.findOne(options);
+  }),
+  findAll: jest.fn((model, { criteria, include, attributes, order, limit, offset, transaction } = {}) => {
+    const options = {
+      where: criteria,
+      ...(include && include.length > 0 && { include }),
+      ...(attributes && { attributes }),
+      ...(order && order.length > 0 && { order }),
+      ...(limit && { limit }),
+      ...(offset && { offset }),
+      ...(transaction && { transaction })
+    };
+    return model.findAll(options);
+  }),
+  create: jest.fn((model, { data, include, attributes, transaction } = {}) => {
+    const options = {
+      ...(include && include.length > 0 && { include }),
+      ...(attributes && { attributes }),
+      ...(transaction && { transaction })
+    };
+    return model.create(data, options);
+  }),
+  update: jest.fn((model, { data, criteria, transaction } = {}) => {
+    const options = {
+      where: criteria,
+      ...(transaction && { transaction })
+    };
+    return model.update(data, options);
+  }),
+  delete: jest.fn()
+}));
+
 // Mock app-config to avoid __dirname/__filename conflicts with Jest's CommonJS transformation
 // Since ES modules evaluate imports before mocks, we need to mock at module level
 jest.mock('../src/config/app-config.js', () => {

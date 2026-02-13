@@ -5,18 +5,17 @@
  */
 
 import express from 'express';
-import moment from 'moment';
 const router = express.Router();
 import * as authController from '../controllers/auth.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { validateRegistration, validateLogin, validateRefreshToken, validateChangePassword } from '../validators/auth.validator.js';
 import { rateLimitDB } from '../middleware/rate-limit-db.middleware.js';
+import { AUTH_RATE_LIMIT_WINDOW_MS, AUTH_RATE_LIMIT_MAX_REQUESTS } from '../config/time.constants.js';
 
-// Rate limiting: 5 attempts per 15 minutes for auth endpoints
-const windowMs15Min = moment.duration(15, 'minutes').asMilliseconds();
+// Rate limiting: use configured attempts per configured window for auth endpoints
 const authRateLimit = rateLimitDB({
-  windowMs: windowMs15Min,
-  maxRequests: 5,
+  windowMs: AUTH_RATE_LIMIT_WINDOW_MS,
+  maxRequests: AUTH_RATE_LIMIT_MAX_REQUESTS,
   message: 'Too many authentication attempts, please try again later',
   skipSuccessfulRequests: true // Don't count successful requests
 });

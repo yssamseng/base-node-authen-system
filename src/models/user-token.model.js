@@ -1,7 +1,7 @@
 import { DataTypes, Model } from 'sequelize';
 import { sequelize } from '../config/database.js';
 import { appLogger } from '../utils/app-logger.util.js';
-import moment from 'moment';
+import { MAX_ACTIVE_SESSIONS, TOKEN_CLEANUP_MS } from '../config/time.constants.js';
 
 /**
  * UserToken Model
@@ -32,7 +32,7 @@ class UserToken extends Model {
     if (!this.refreshTokenExpiresAt) {
       return true;
     }
-    return moment().isAfter(this.refreshTokenExpiresAt);
+    return new Date() > this.refreshTokenExpiresAt;
   }
 
   /**
@@ -43,7 +43,7 @@ class UserToken extends Model {
     if (!this.accessTokenExpiresAt) {
       return true;
     }
-    return moment().isAfter(this.accessTokenExpiresAt);
+    return new Date() > this.accessTokenExpiresAt;
   }
 
   /**
@@ -166,10 +166,10 @@ UserToken.init({
  * Revokes oldest session if limit is exceeded
  * @static
  * @param {number} userId - User ID
- * @param {number} maxSessions - Maximum active sessions allowed (default: 2)
+ * @param {number} maxSessions - Maximum active sessions allowed (default: from config)
  * @returns {Promise<void>}
  */
-UserToken.enforceSessionLimit = async (userId, maxSessions = 2) => {
+UserToken.enforceSessionLimit = async (userId, maxSessions = MAX_ACTIVE_SESSIONS) => {
   try {
     // Count active sessions for this user
     const activeSessionsCount = await UserToken.count({
@@ -202,25 +202,28 @@ UserToken.enforceSessionLimit = async (userId, maxSessions = 2) => {
 
 /**
  * Clean up expired and revoked tokens
- * Removes expired refresh tokens and inactive tokens older than 7 days
+ * Removes expired refresh tokens and inactive tokens older than configured days
  * @static
  * @returns {Promise<void>}
  */
 UserToken.cleanupExpiredTokens = async () => {
   try {
+    const now = new Date();
+    const cleanupThreshold = new Date(Date.now() - TOKEN_CLEANUP_MS);
+
     const deletedCount = await UserToken.destroy({
       where: {
         [sequelize.Sequelize.Op.or]: [
           {
             refreshTokenExpiresAt: {
-              [sequelize.Sequelize.Op.lt]: moment().toDate()
+              [sequelize.Sequelize.Op.lt]: now
             }
           },
           {
             isActive: false,
             updatedAt: {
-              // Remove inactive tokens after 7 days
-              [sequelize.Sequelize.Op.lt]: moment().subtract(7, 'days').toDate()
+              // Remove inactive tokens after configured days
+              [sequelize.Sequelize.Op.lt]: cleanupThreshold
             }
           }
         ]
