@@ -5,12 +5,48 @@
 
 import { describe, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
 import request from 'supertest';
+import fs from 'fs';
+import path from 'path';
+
+// Test upload directory relative to project root
+const testUploadDir = path.join(process.cwd(), 'uploads', 'test');
 
 // Mock dependencies BEFORE importing app
 jest.mock('../../src/config/database.js');
 jest.mock('../../src/models/model.js');
 jest.mock('../../src/utils/app-logger.util.js');
-jest.mock('../../src/services/file-upload.service.js');
+
+// Mock file-upload service with implementations
+jest.mock('../../src/services/file-upload.service.js', () => ({
+  saveFileRecord: jest.fn().mockImplementation((data) => Promise.resolve({
+    id: Date.now(),
+    ...data
+  })),
+  getFileById: jest.fn().mockImplementation((fileId) => {
+    if (fileId === '999999') return Promise.resolve(null);
+    return Promise.resolve({
+      id: fileId,
+      filename: 'test.csv',
+      userId: 1
+    });
+  }),
+  listUserFiles: jest.fn().mockResolvedValue([
+    { id: 1, filename: 'file1.csv' },
+    { id: 2, filename: 'file2.csv' }
+  ]),
+  deleteFileById: jest.fn().mockImplementation((fileId) => {
+    if (fileId === '999999') return Promise.resolve(false);
+    return Promise.resolve(true);
+  }),
+  getDownloadUrl: jest.fn().mockReturnValue('/api/v1/files/download?path=test'),
+  validateFileAccess: jest.fn().mockResolvedValue(true),
+  getUserStorageInfo: jest.fn().mockResolvedValue({
+    totalSize: 1048576,
+    usedSize: 524288,
+    availableSize: 1073741824,
+    fileCount: 5
+  })
+}));
 
 // Import mocked modules
 import models from '../../src/models/model.js';
@@ -27,6 +63,16 @@ describe('File Upload Integration Tests', () => {
   let testUserId;
 
   beforeAll(async () => {
+    // Create test upload directory
+    try {
+      fs.mkdirSync(testUploadDir, { recursive: true });
+    } catch (error) {
+      // Ignore if directory already exists
+      if (error.code !== 'EEXIST') {
+        console.error('Failed to create test upload directory:', error);
+      }
+    }
+
     // Mock User.findOne to return null for registration checks (email and username)
     User.findOne = jest.fn().mockImplementation((options) => {
       // During registration, check if email or username exists - return null
@@ -108,6 +154,14 @@ describe('File Upload Integration Tests', () => {
     await request(app)
       .delete('/api/v1/auth/register')
       .set('Authorization', authToken);
+
+    // Cleanup: Remove test upload directory
+    try {
+      fs.rmSync(testUploadDir, { recursive: true, force: true });
+    } catch (error) {
+      // Ignore cleanup errors
+      console.warn('Failed to remove test upload directory:', error.message);
+    }
   });
 
   beforeEach(() => {
@@ -146,59 +200,19 @@ describe('File Upload Integration Tests', () => {
       lastUsedAt: new Date(),
       save: jest.fn().mockResolvedValue()
     });
+  });
 
-    // Setup mocks for file-upload service functions
-    const fileUploadService = require('../../src/services/file-upload.service.js');
-
-    // Mock saveFileRecord for file upload
-    fileUploadService.saveFileRecord = jest.fn().mockResolvedValue({
-      id: 123,
-      filename: 'test-123456.pdf',
-      originalName: 'test.pdf',
-      mimetype: 'application/pdf',
-      size: 12345,
-      userId: 1
-    });
-
-    // Mock listUserFiles for listing files
-    fileUploadService.listUserFiles = jest.fn().mockResolvedValue([
-      { id: 1, filename: 'file1.pdf' },
-      { id: 2, filename: 'file2.jpg' }
-    ]);
-
-    // Mock getFileById for getting file metadata
-    fileUploadService.getFileById = jest.fn().mockImplementation((fileId) => {
-      if (fileId === '999999') {
-        return Promise.resolve(null);
-      }
-      return Promise.resolve({
-        id: fileId,
-        filename: 'test.pdf',
-        userId: 1
+  afterEach(() => {
+    // Clean up any files created during tests
+    try {
+      const files = fs.readdirSync(testUploadDir);
+      files.forEach(file => {
+        const filePath = path.join(testUploadDir, file);
+        fs.unlinkSync(filePath);
       });
-    });
-
-    // Mock validateFileAccess for access validation
-    fileUploadService.validateFileAccess = jest.fn().mockResolvedValue(true);
-
-    // Mock getDownloadUrl for download URL generation
-    fileUploadService.getDownloadUrl = jest.fn().mockReturnValue('/api/v1/files/download?path=%2Fuploads%2Fuser%2Ftest.pdf');
-
-    // Mock deleteFileById for file deletion
-    fileUploadService.deleteFileById = jest.fn().mockImplementation((fileId) => {
-      if (fileId === '999999') {
-        return Promise.resolve(false);
-      }
-      return Promise.resolve(true);
-    });
-
-    // Mock getUserStorageInfo for storage info
-    fileUploadService.getUserStorageInfo = jest.fn().mockResolvedValue({
-      totalSize: 1048576,
-      usedSize: 524288,
-      availableSize: 1073741824,
-      fileCount: 5
-    });
+    } catch (error) {
+      // Ignore cleanup errors
+    }
   });
 
   describe('POST /api/v1/files/upload', () => {
@@ -209,9 +223,15 @@ describe('File Upload Integration Tests', () => {
         .attach('file', Buffer.from('test,content,data'), {
           filename: 'test.csv',
           contentType: 'text/csv'
-        })
-        .expect(200);
+        });
 
+      // Debug: Log response if not successful
+      if (response.status !== 200) {
+        console.log('Upload failed with status:', response.status);
+        console.log('Response body:', response.body);
+      }
+
+      expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
         status: true,
         resCode: RES_CODE.FILE_UPLOAD_SUCCESS
