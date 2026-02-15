@@ -4,6 +4,7 @@
  */
 
 import 'dotenv/config';
+import dotenvSafe from "dotenv-safe";
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -15,6 +16,19 @@ const NODE_ENV = process.env.NODE_ENV || "development";
 
 console.log(`✅ Loaded environment`);
 console.log(`🌍 NODE_ENV = ${NODE_ENV}`);
+
+// import .env variables
+if (!process.env.NODE_ENV) {
+  dotenvSafe.config({
+    path: path.join(__dirname, "./env/.env.dev"),
+    sample: path.join(__dirname, "./env/.env"),
+  });
+} else if (process.env.NODE_ENV === "production") {
+  dotenvSafe.config({
+    path: path.join(__dirname, "./env/.env"),
+    sample: path.join(__dirname, "./env/.env"),
+  });
+}
 
 // Centralized application configuration object
 const APP_CONFIG = {
