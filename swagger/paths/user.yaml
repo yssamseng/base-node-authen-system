@@ -1,0 +1,131 @@
+# User profile endpoints
+
+/profile:
+  get:
+    summary: Get user profile
+    description: Retrieve the current user's profile information
+    tags:
+      - User
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: Profile retrieved successfully
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas.yaml#/Success'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '../components/schemas.yaml#/User'
+            example:
+              status: true
+              transactionId: 550e8400-e29b-41d4-a716-446655440000
+              resCode: 20000
+              data:
+                id: 1
+                username: johndoe
+                email: john@example.com
+                firstName: John
+                lastName: Doe
+                isActive: true
+                createdAt: '2024-01-15T10:30:00.000Z'
+      '401':
+        description: Authentication required
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            example:
+              status: false
+              transactionId: 550e8400-e29b-41d4-a716-446655440000
+              resCode: 40100
+              error:
+                developerMessage: Authentication token missing
+                userMessage: ต้องระบุ token สำหรับยืนยันตัวตน
+      '404':
+        description: User not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            example:
+              status: false
+              transactionId: 550e8400-e29b-41d4-a716-446655440000
+              resCode: 40402
+              error:
+                developerMessage: User not found
+                userMessage: ไม่พบผู้ใช้งาน
+
+  put:
+    summary: Update user profile
+    description: Update the current user's profile information
+    tags:
+      - User
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/UpdateProfileRequest'
+          example:
+            firstName: John
+            lastName: Smith
+    responses:
+      '200':
+        description: Profile updated successfully
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas.yaml#/Success'
+                - type: object
+                  properties:
+                    resCode:
+                      type: integer
+                      example: 20013
+                    data:
+                      $ref: '../components/schemas.yaml#/User'
+            example:
+              status: true
+              transactionId: 550e8400-e29b-41d4-a716-446655440000
+              resCode: 20013
+              data:
+                id: 1
+                username: johndoe
+                email: john@example.com
+                firstName: John
+                lastName: Smith
+                isActive: true
+                createdAt: '2024-01-15T10:30:00.000Z'
+                updatedAt: '2024-01-20T14:45:00.000Z'
+      '400':
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            example:
+              status: false
+              transactionId: 550e8400-e29b-41d4-a716-446655440000
+              resCode: 40001
+              error:
+                developerMessage: Validation failed
+                userMessage: ข้อมูลไม่ถูกต้อง
+      '401':
+        description: Authentication required
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            example:
+              status: false
+              transactionId: 550e8400-e29b-41d4-a716-446655440000
+              resCode: 40100
+              error:
+                developerMessage: Authentication token missing
+                userMessage: ต้องระบุ token สำหรับยืนยันตัวตน

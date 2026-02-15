@@ -1,0 +1,134 @@
+openapi: 3.0.0
+info:
+  title: Node Auth API
+  version: 1.0.0
+  description: |
+    Authentication API with user management, JWT tokens, and email verification.
+
+    ## Features
+    - User registration and login
+    - JWT access/refresh tokens
+    - Email verification
+    - Password reset
+    - File upload/management
+    - Rate limiting
+    - Multi-language support (Thai/English)
+
+    ## Authentication
+    Most endpoints require a Bearer token in the Authorization header:
+    `Authorization: Bearer <access_token>`
+
+    ## Response Format
+    All responses follow this format:
+
+    **Success:**
+    ```json
+    {
+      "status": true,
+      "transactionId": "uuid",
+      "resCode": 20000,
+      "data": { ... }
+    }
+    ```
+
+    **Error:**
+    ```json
+    {
+      "status": false,
+      "transactionId": "uuid",
+      "resCode": 40001,
+      "error": {
+        "developerMessage": "...",
+        "userMessage": "..."
+      }
+    }
+    ```
+
+    ## Response Codes
+    - `20000` - Success
+    - `20010` - Registration success
+    - `20011` - Login success
+    - `20013` - Profile updated
+    - `20020` - File upload success
+    - `40000` - Invalid request
+    - `40001` - Invalid parameter
+    - `40100` - Authentication required
+    - `40111` - Invalid token
+    - `40112` - Token expired
+    - `40402` - User not found
+    - `40900` - Email already exists
+    - `50000` - Internal error
+
+  contact:
+    name: API Support
+    email: support@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.example.com
+    description: Production server
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Authentication
+    description: User authentication and registration
+  - name: User
+    description: User profile management
+  - name: Email Verification
+    description: Email verification and password reset
+  - name: Files
+    description: File upload and management
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token obtained from login/registration
+
+# Paths are loaded from separate YAML files:
+# - swagger/paths/auth.yaml (mounted under /api/v1/auth)
+# - swagger/paths/user.yaml (mounted under /api/v1/user)
+# And merged via swagger.config.js
+#
+# Note: All routes are prefixed with /api in app.js
+
+paths:
+  /api/health:
+    get:
+      summary: Health check endpoint
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - healthy
+                      - unhealthy
+                  timestamp:
+                    type: string
+                    format: date-time
+                  uptime:
+                    type: number
+                  environment:
+                    type: string
+                  database:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                      message:
+                        type: string
