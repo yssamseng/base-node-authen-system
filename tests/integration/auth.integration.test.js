@@ -103,7 +103,7 @@ describe('Authentication Integration Tests', () => {
 
       expect(response.body).toMatchObject({
         status: true,
-        resCode: '20001', // REGISTRATION_SUCCESS
+        resCode: 20010, // REGISTRATION_SUCCESS
         data: expect.objectContaining({
           user: expect.objectContaining({
             username: 'testuser',
@@ -123,11 +123,11 @@ describe('Authentication Integration Tests', () => {
       const response = await request(app)
         .post('/api/v1/auth/register')
         .send(invalidData)
-        .expect(422);
+        .expect(400);
 
       expect(response.body).toMatchObject({
         status: false,
-        resCode: '42201'
+        resCode: 40000 // INVALID_REQUEST for validation errors
       });
       // Verify that validation errors are present
       expect(response.body.error).toBeDefined();
@@ -145,11 +145,11 @@ describe('Authentication Integration Tests', () => {
       const response = await request(app)
         .post('/api/v1/auth/register')
         .send(validUserData)
-        .expect(400);
+        .expect(409);
 
       expect(response.body).toMatchObject({
         status: false,
-        resCode: '40001'
+        resCode: 40900 // EMAIL_ALREADY_EXISTS
       });
     });
   });
@@ -195,7 +195,7 @@ describe('Authentication Integration Tests', () => {
 
       expect(response.body).toMatchObject({
         status: true,
-        resCode: '20003',
+        resCode: 20011, // LOGIN_SUCCESS
         data: expect.objectContaining({
           user: expect.objectContaining({
             email: 'test@example.com'
@@ -230,11 +230,11 @@ describe('Authentication Integration Tests', () => {
       const response = await request(app)
         .post('/api/v1/auth/login')
         .send(loginData)
-        .expect(400);
+        .expect(401);
 
       expect(response.body).toMatchObject({
         status: false,
-        resCode: '40003'
+        resCode: 40120 // INVALID_CREDENTIALS
       });
     });
 
@@ -247,11 +247,11 @@ describe('Authentication Integration Tests', () => {
       const response = await request(app)
         .post('/api/v1/auth/login')
         .send(invalidData)
-        .expect(422);
+        .expect(400);
 
       expect(response.body).toMatchObject({
         status: false,
-        resCode: '42201'
+        resCode: 40000 // INVALID_REQUEST for validation errors
       });
     });
   });
@@ -334,7 +334,7 @@ describe('Authentication Integration Tests', () => {
       const response = await request(app)
         .get('/api/v1/user/profile')
         .set('Authorization', 'Bearer invalid_token')
-        .expect(400);
+        .expect(401);
 
       expect(response.body).toMatchObject({
         status: false
@@ -444,7 +444,7 @@ describe('Authentication Integration Tests', () => {
 
       expect(response.body).toMatchObject({
         status: true,
-        resCode: '20000',
+        resCode: 20000,
         data: expect.objectContaining({
           status: 'healthy'
         })

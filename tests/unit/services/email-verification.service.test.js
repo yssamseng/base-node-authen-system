@@ -101,7 +101,7 @@ describe('Email Verification Service', () => {
       User.findOne.mockResolvedValue(null);
 
       await expect(emailVerificationService.resendVerificationEmail(mockReq)).rejects.toThrow('User not found');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40403', 'User not found');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40402, 'User not found');
     });
 
     test('should throw error if user is already verified', async () => {
@@ -118,7 +118,7 @@ describe('Email Verification Service', () => {
       User.findOne.mockResolvedValue(mockUser);
 
       await expect(emailVerificationService.resendVerificationEmail(mockReq)).rejects.toThrow('Email is already verified');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40010', 'Email is already verified');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40901, 'Email is already verified');
     });
 
     test('should throw error if user is inactive', async () => {
@@ -132,7 +132,7 @@ describe('Email Verification Service', () => {
       User.findOne.mockResolvedValue(mockUser);
 
       await expect(emailVerificationService.resendVerificationEmail(mockReq)).rejects.toThrow('Account is deactivated');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40004', 'Account is deactivated');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40310, 'Account is deactivated');
     });
 
     test('should throw error if auth record not found', async () => {
@@ -147,7 +147,7 @@ describe('Email Verification Service', () => {
       User.findOne.mockResolvedValue(mockUser);
 
       await expect(emailVerificationService.resendVerificationEmail(mockReq)).rejects.toThrow('Authentication data not found');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40008', 'Authentication data not found');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40410, 'Authentication data not found');
     });
 
     test('should handle email sending failures', async () => {
@@ -174,7 +174,7 @@ describe('Email Verification Service', () => {
 
       // The service should throw an error when email sending fails
       await expect(emailVerificationService.resendVerificationEmail(mockReq)).rejects.toThrow('Failed to send verification email');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '50001', 'Failed to send verification email');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 50001, 'Failed to send verification email');
     });
   });
 
@@ -218,7 +218,7 @@ describe('Email Verification Service', () => {
       UserAuth.findOne.mockResolvedValue(null);
 
       await expect(emailVerificationService.verifyEmail(mockReq)).rejects.toThrow('Invalid or expired verification token');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40013', 'Invalid or expired verification token');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40111, 'Invalid or expired verification token');
     });
 
     test('should throw error if token is expired', async () => {
@@ -234,7 +234,7 @@ describe('Email Verification Service', () => {
       UserAuth.findOne.mockResolvedValue(mockUserAuth);
 
       await expect(emailVerificationService.verifyEmail(mockReq)).rejects.toThrow('Verification token has expired. Please request a new one');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40014', 'Verification token has expired. Please request a new one');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40112, 'Verification token has expired. Please request a new one');
     });
 
     test('should throw error if user is already verified', async () => {
@@ -250,7 +250,7 @@ describe('Email Verification Service', () => {
       UserAuth.findOne.mockResolvedValue(mockUserAuth);
 
       await expect(emailVerificationService.verifyEmail(mockReq)).rejects.toThrow('Email is already verified');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40015', 'Email is already verified');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40901, 'Email is already verified');
     });
   });
 
@@ -381,7 +381,7 @@ describe('Email Verification Service', () => {
       UserAuth.findOne.mockResolvedValue(null);
 
       await expect(emailVerificationService.resetPassword(mockReq)).rejects.toThrow('Invalid or expired reset token');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40017', 'Invalid or expired reset token');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40111, 'Invalid or expired reset token');
     });
 
     test('should throw error if reset token is expired', async () => {
@@ -400,7 +400,7 @@ describe('Email Verification Service', () => {
       UserAuth.findOne.mockResolvedValue(mockUserAuth);
 
       await expect(emailVerificationService.resetPassword(mockReq)).rejects.toThrow('Password reset token has expired. Please request a new one');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40018', 'Password reset token has expired. Please request a new one');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40112, 'Password reset token has expired. Please request a new one');
     });
   });
 
@@ -442,7 +442,7 @@ describe('Email Verification Service', () => {
       UserAuth.findOne.mockResolvedValue(null);
 
       await expect(emailVerificationService.checkVerificationStatus(mockReq)).rejects.toThrow('Authentication data not found');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40008', 'Authentication data not found');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40410, 'Authentication data not found');
     });
 
     test('should handle unverified user with pending verification', async () => {
@@ -474,7 +474,7 @@ describe('Email Verification Service', () => {
       mockReq.user = null;
 
       await expect(emailVerificationService.checkVerificationStatus(mockReq)).rejects.toThrow('User not found');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40403', 'User not found');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40402, 'User not found');
     });
   });
 

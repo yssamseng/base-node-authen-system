@@ -122,7 +122,7 @@ describe('Auth Service', () => {
       findOne.mockResolvedValueOnce(existingUser);
 
       await expect(authService.register(mockReq, mockTransaction)).rejects.toThrow('User with this email already exists');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40013', 'User with this email already exists');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40900, 'User with this email already exists');
       expect(create).not.toHaveBeenCalled();
     });
 
@@ -135,7 +135,7 @@ describe('Auth Service', () => {
         .mockResolvedValueOnce(existingUser); // Existing username
 
       await expect(authService.register(mockReq, mockTransaction)).rejects.toThrow('Username is already taken');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40002', 'Username is already taken');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40902, 'Username is already taken');
       expect(create).not.toHaveBeenCalled();
     });
 
@@ -206,7 +206,7 @@ describe('Auth Service', () => {
       User.findOne.mockResolvedValue(null);
 
       await expect(authService.login(mockReq)).rejects.toThrow('Invalid email or password');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40003', 'Invalid email or password');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40120, 'Invalid email or password');
     });
 
     test('should throw error if user is inactive', async () => {
@@ -221,7 +221,7 @@ describe('Auth Service', () => {
       User.findOne.mockResolvedValue(mockUser);
 
       await expect(authService.login(mockReq)).rejects.toThrow('Your account has been deactivated');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40004', 'Your account has been deactivated');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40310, 'Your account has been deactivated');
     });
 
     test('should throw error if user auth data not found', async () => {
@@ -236,7 +236,7 @@ describe('Auth Service', () => {
       User.findOne.mockResolvedValue(mockUser);
 
       await expect(authService.login(mockReq)).rejects.toThrow('Authentication data not found');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40010', 'Authentication data not found');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40410, 'Authentication data not found');
     });
 
     test('should throw error if account is locked', async () => {
@@ -254,7 +254,7 @@ describe('Auth Service', () => {
       User.findOne.mockResolvedValue(mockUser);
 
       await expect(authService.login(mockReq)).rejects.toThrow('Account is locked until');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40005', expect.stringContaining('Account is locked until'));
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40311, expect.stringContaining('Account is locked until'));
     });
 
     test('should throw error if password is invalid', async () => {
@@ -275,7 +275,7 @@ describe('Auth Service', () => {
       await expect(authService.login(mockReq)).rejects.toThrow('Invalid email or password');
       expect(mockUser.auth.comparePassword).toHaveBeenCalledWith(validLoginData.password);
       expect(mockUser.auth.incrementFailedAttempts).toHaveBeenCalled();
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40003', 'Invalid email or password');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40120, 'Invalid email or password');
     });
   });
 

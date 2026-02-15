@@ -60,7 +60,8 @@ describe('file-upload.controller', () => {
         path: '/uploads/user/test-123456.pdf'
       },
       params: {},
-      query: {}
+      query: {},
+      get: jest.fn()
     };
 
     // Mock response object
@@ -74,7 +75,7 @@ describe('file-upload.controller', () => {
     it('should upload file successfully', async () => {
       const mockFileRecord = { id: 123, filename: 'test-123456.pdf' };
       fileUploadService.saveFileRecord.mockResolvedValue(mockFileRecord);
-      genResponseObj.mockReturnValue({ status: true, resCode: '20011', data: mockFileRecord });
+      genResponseObj.mockReturnValue({ status: true, resCode: 20020, data: mockFileRecord });
       response.mockReturnValue(mockRes);
 
       await uploadFile(mockReq, mockRes);
@@ -95,14 +96,15 @@ describe('file-upload.controller', () => {
 
     it('should return error when no file provided', async () => {
       mockReq.file = null;
-      genErrorResponseObj.mockReturnValue({ status: false, resCode: '40001', error: {} });
+      genErrorResponseObj.mockReturnValue({ status: false, resCode: 40024, error: {} });
       responseError.mockReturnValue(mockRes);
 
       await uploadFile(mockReq, mockRes);
 
       expect(genErrorResponseObj).toHaveBeenCalledWith(
         mockReq,
-        RES_CODE.FILE_UPLOAD_ERROR.NO_FILE_PROVIDED
+        RES_CODE.NO_FILE_PROVIDED,
+        'No file uploaded'
       );
       expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
     });
@@ -151,7 +153,7 @@ describe('file-upload.controller', () => {
       fileUploadService.getDownloadUrl.mockReturnValue('/api/v1/files/download?path=%2Fuploads%2Fuser%2Ftest.pdf');
       genResponseObj.mockReturnValue({
         status: true,
-        resCode: '20012',
+        resCode: 20021,
         data: { file: mockFileRecord, downloadUrl: '/api/v1/files/download?path=%2Fuploads%2Fuser%2Ftest.pdf' }
       });
       response.mockReturnValue(mockRes);
@@ -164,14 +166,15 @@ describe('file-upload.controller', () => {
     it('should return 404 if file not found', async () => {
       mockReq.params = { fileId: '999' };
       fileUploadService.getFileById.mockResolvedValue(null);
-      genErrorResponseObj.mockReturnValue({ status: false, resCode: '40004', error: {} });
+      genErrorResponseObj.mockReturnValue({ status: false, resCode: 40403, error: {} });
       responseError.mockReturnValue(mockRes);
 
       await getFile(mockReq, mockRes);
 
       expect(genErrorResponseObj).toHaveBeenCalledWith(
         mockReq,
-        RES_CODE.FILE_UPLOAD_ERROR.FILE_NOT_FOUND
+        RES_CODE.FILE_NOT_FOUND,
+        'File not found'
       );
       expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
     });
@@ -181,14 +184,15 @@ describe('file-upload.controller', () => {
       const mockFileRecord = { id: 123, filename: 'test.pdf', userId: 1 };
       fileUploadService.getFileById.mockResolvedValue(mockFileRecord);
       fileUploadService.validateFileAccess.mockResolvedValue(false);
-      genErrorResponseObj.mockReturnValue({ status: false, resCode: '40005', error: {} });
+      genErrorResponseObj.mockReturnValue({ status: false, resCode: 40321, error: {} });
       responseError.mockReturnValue(mockRes);
 
       await getFile(mockReq, mockRes);
 
       expect(genErrorResponseObj).toHaveBeenCalledWith(
         mockReq,
-        RES_CODE.FILE_UPLOAD_ERROR.ACCESS_DENIED
+        RES_CODE.ACCESS_DENIED,
+        'No permission to access this file'
       );
       expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
     });
@@ -199,7 +203,7 @@ describe('file-upload.controller', () => {
       mockReq.query = { path: '/uploads/user/test.pdf' };
       genResponseObj.mockReturnValue({
         status: true,
-        resCode: '20012',
+        resCode: 20021,
         data: { message: 'File download ready', path: '/uploads/user/test.pdf' }
       });
       response.mockReturnValue(mockRes);
@@ -208,7 +212,7 @@ describe('file-upload.controller', () => {
 
       expect(genResponseObj).toHaveBeenCalledWith(
         mockReq,
-        RES_CODE.FILE_DOWNLOAD_SUCCESS,
+        RES_CODE.FILE_DOWNLOAD_READY,
         { message: 'File download ready', path: '/uploads/user/test.pdf' }
       );
       expect(response).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
@@ -216,14 +220,15 @@ describe('file-upload.controller', () => {
 
     it('should return error when path missing', async () => {
       mockReq.query = {};
-      genErrorResponseObj.mockReturnValue({ status: false, resCode: '40001', error: {} });
+      genErrorResponseObj.mockReturnValue({ status: false, resCode: 40024, error: {} });
       responseError.mockReturnValue(mockRes);
 
       await downloadFile(mockReq, mockRes);
 
       expect(genErrorResponseObj).toHaveBeenCalledWith(
         mockReq,
-        RES_CODE.BAD_REQUEST
+        RES_CODE.INVALID_REQUEST,
+        'File path is required'
       );
       expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
     });
@@ -232,7 +237,7 @@ describe('file-upload.controller', () => {
       mockReq.query = { path: '../../../etc/passwd' };
       genResponseObj.mockReturnValue({
         status: true,
-        resCode: '20012',
+        resCode: 20021,
         data: { message: 'File download ready', path: 'etcpasswd' }
       });
       response.mockReturnValue(mockRes);
@@ -241,8 +246,8 @@ describe('file-upload.controller', () => {
 
       expect(genResponseObj).toHaveBeenCalledWith(
         mockReq,
-        RES_CODE.FILE_DOWNLOAD_SUCCESS,
-        { message: 'File download ready', path: 'etcpasswd' }
+        RES_CODE.FILE_DOWNLOAD_READY,
+        { message: 'File download ready', path: 'etc/passwd' }
       );
       expect(response).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
     });
@@ -252,7 +257,7 @@ describe('file-upload.controller', () => {
     it('should delete file successfully', async () => {
       mockReq.params = { fileId: '123' };
       fileUploadService.deleteFileById.mockResolvedValue(true);
-      genResponseObj.mockReturnValue({ status: true, resCode: '20013' });
+      genResponseObj.mockReturnValue({ status: true, resCode: 20022 });
       response.mockReturnValue(mockRes);
 
       await deleteFile(mockReq, mockRes);
@@ -268,14 +273,15 @@ describe('file-upload.controller', () => {
     it('should return error on delete failure', async () => {
       mockReq.params = { fileId: '123' };
       fileUploadService.deleteFileById.mockResolvedValue(false);
-      genErrorResponseObj.mockReturnValue({ status: false, resCode: '50000', error: {} });
+      genErrorResponseObj.mockReturnValue({ status: false, resCode: 50000, error: {} });
       responseError.mockReturnValue(mockRes);
 
       await deleteFile(mockReq, mockRes);
 
       expect(genErrorResponseObj).toHaveBeenCalledWith(
         mockReq,
-        RES_CODE.INTERNAL_ERROR
+        RES_CODE.INTERNAL_ERROR,
+        'Failed to delete file'
       );
       expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
     });
@@ -302,7 +308,7 @@ describe('file-upload.controller', () => {
       fileUploadService.getUserStorageInfo.mockRejectedValue(
         new Error('Storage error')
       );
-      genErrorResponseObj.mockReturnValue({ status: false, resCode: '50000', error: {} });
+      genErrorResponseObj.mockReturnValue({ status: false, resCode: 50000, error: {} });
       responseError.mockReturnValue(mockRes);
 
       await getStorageInfo(mockReq, mockRes);

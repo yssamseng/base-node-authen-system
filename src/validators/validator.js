@@ -1,4 +1,5 @@
 import { responseError, genErrorResponseObj } from '../core/handler.js';
+import { RES_CODE } from '../config/constants.js';
 
 /**
  * Create validation middleware for request body
@@ -18,7 +19,7 @@ const validateRequest = (schema) => {
         message: detail.message
       }));
 
-      const result = genErrorResponseObj(req, '42201', {
+      const result = genErrorResponseObj(req, RES_CODE.INVALID_REQUEST, {
         message: 'Validation failed',
         validationErrors: errors,
       });

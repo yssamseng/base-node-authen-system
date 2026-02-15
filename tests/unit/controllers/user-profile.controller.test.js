@@ -36,7 +36,7 @@ describe('User Profile Controller', () => {
     genResponseObj.mockReturnValue({
       status: true,
       transactionId: 'test-txn-id',
-      resCode: '20000',
+      resCode: 20000,
       data: {}
     });
   });
@@ -64,7 +64,7 @@ describe('User Profile Controller', () => {
       expect(userProfileService.getProfile).toHaveBeenCalledWith(mockReq);
       expect(response).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(responseError).not.toHaveBeenCalled();
-      expect(genResponseObj).toHaveBeenCalledWith(mockReq, '20000', mockResult);
+      expect(genResponseObj).toHaveBeenCalledWith(mockReq, 20000, mockResult);
     });
 
     test('should handle profile retrieval errors', async () => {
@@ -147,7 +147,7 @@ describe('User Profile Controller', () => {
       expect(userProfileService.updateProfile).toHaveBeenCalledWith(mockReq);
       expect(response).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(responseError).not.toHaveBeenCalled();
-      expect(genResponseObj).toHaveBeenCalledWith(mockReq, '20004', mockResult);
+      expect(genResponseObj).toHaveBeenCalledWith(mockReq, 20013, mockResult);
     });
 
     test('should handle partial profile updates', async () => {
@@ -169,7 +169,7 @@ describe('User Profile Controller', () => {
 
       expect(userProfileService.updateProfile).toHaveBeenCalledWith(mockReq);
       expect(response).toHaveBeenCalled();
-      expect(genResponseObj).toHaveBeenCalledWith(mockReq, '20004', mockResult);
+      expect(genResponseObj).toHaveBeenCalledWith(mockReq, 20013, mockResult);
     });
 
     test('should handle profile update errors', async () => {
@@ -328,7 +328,7 @@ describe('User Profile Controller', () => {
 
       await userProfileController.getProfile(mockReq, mockRes);
 
-      expect(genResponseObj).toHaveBeenCalledWith(mockReq, '20000', mockResult);
+      expect(genResponseObj).toHaveBeenCalledWith(mockReq, 20000, mockResult);
     });
 
     test('should generate correct response object for successful profile update', async () => {
@@ -348,7 +348,7 @@ describe('User Profile Controller', () => {
 
       await userProfileController.updateProfile(mockReq, mockRes);
 
-      expect(genResponseObj).toHaveBeenCalledWith(mockReq, '20004', mockResult);
+      expect(genResponseObj).toHaveBeenCalledWith(mockReq, 20013, mockResult);
     });
   });
 

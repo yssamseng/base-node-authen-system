@@ -1,6 +1,7 @@
 import { sequelize } from '../config/database.js';
 import { response, genResponseObj } from '../core/handler.js';
 import { appLogger } from '../utils/app-logger.util.js';
+import { RES_CODE } from '../config/constants.js';
 
 /**
  * Health check controller with database status
@@ -37,7 +38,7 @@ const healthCheck = async (req, res) => {
   }
 
   // Return appropriate status code based on health
-  const statusCode = healthStatus.status === 'healthy' ? '20000' : '50000';
+  const statusCode = healthStatus.status === 'healthy' ? RES_CODE.SUCCESS : RES_CODE.INTERNAL_ERROR;
   return response(req, res, genResponseObj(req, statusCode, healthStatus));
 };
 

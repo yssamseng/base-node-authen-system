@@ -97,7 +97,7 @@ describe('Auth Middleware', () => {
 
       await authenticate(mockReq, mockRes, mockNext);
 
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40006', 'No authentication token, access denied');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40100, 'No authentication token, access denied');
       expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -148,7 +148,7 @@ describe('Auth Middleware', () => {
 
       await authenticate(mockReq, mockRes, mockNext);
 
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40103', 'Token has expired');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40112, 'Token has expired');
       expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -164,7 +164,7 @@ describe('Auth Middleware', () => {
 
       await authenticate(mockReq, mockRes, mockNext);
 
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40007', 'Token is not valid');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40111, 'Token is not valid');
       expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -181,7 +181,7 @@ describe('Auth Middleware', () => {
 
       await authenticate(mockReq, mockRes, mockNext);
 
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40007', 'Token is not valid or has been revoked');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40111, 'Token is not valid or has been revoked');
       expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -228,7 +228,7 @@ describe('Auth Middleware', () => {
 
       await authenticate(mockReq, mockRes, mockNext);
 
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40403', 'User not found');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40402, 'User not found');
       expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -251,7 +251,7 @@ describe('Auth Middleware', () => {
 
       await authenticate(mockReq, mockRes, mockNext);
 
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40004', 'User account is inactive');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40310, 'User account is inactive');
       expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -299,7 +299,7 @@ describe('Auth Middleware', () => {
       await authenticate(mockReq, mockRes, mockNext);
 
       expect(mockTokenRecord.revoke).toHaveBeenCalled();
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40103', 'Access token has expired');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40112, 'Access token has expired');
       expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -318,7 +318,7 @@ describe('Auth Middleware', () => {
 
       await authenticate(mockReq, mockRes, mockNext);
 
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '50000', 'Server error during authentication');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 50000, 'Server error during authentication');
       expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -340,7 +340,7 @@ describe('Auth Middleware', () => {
 
       await authenticate(mockReq, mockRes, mockNext);
 
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '50000', 'Server error during authentication');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 50000, 'Server error during authentication');
       expect(responseError).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -364,7 +364,7 @@ describe('Auth Middleware', () => {
       await authenticate(mockReq, mockRes, mockNext);
 
       // Should not throw error if save fails, middleware should continue
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '50000', 'Server error during authentication');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 50000, 'Server error during authentication');
     });
   });
 

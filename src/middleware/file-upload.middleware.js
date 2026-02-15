@@ -9,6 +9,7 @@ import path from 'path';
 import fs from 'fs';
 import { appLogger } from '../utils/app-logger.util.js';
 import { FILE_UPLOAD_CONFIG, isValidFileType, isValidFileSize, sanitizeFilename, generateStoragePath } from '../config/file-upload.config.js';
+import { RES_CODE } from '../config/constants.js';
 
 /**
  * Configure Multer for file uploads
@@ -64,14 +65,14 @@ const upload = multer({
     // Check file type
     if (!isValidFileType(file.mimetype)) {
       const error = new Error(`Invalid file type: ${file.mimetype}`);
-      error.code = FILE_UPLOAD_ERROR.INVALID_FILE;
+      error.resCode = RES_CODE.INVALID_FILE_TYPE;
       return cb(error);
     }
 
     // Check file size
     if (!isValidFileSize(file.size)) {
       const error = new Error(`File too large: ${file.size} bytes`);
-      error.code = FILE_UPLOAD_ERROR.FILE_TOO_LARGE;
+      error.resCode = RES_CODE.FILE_TOO_LARGE;
       return cb(error);
     }
 

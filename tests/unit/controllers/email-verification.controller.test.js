@@ -36,7 +36,7 @@ describe('Email Verification Controller', () => {
     genResponseObj.mockReturnValue({
       status: true,
       transactionId: 'test-txn-id',
-      resCode: '20000',
+      resCode: 20000,
       data: {}
     });
   });
@@ -61,14 +61,14 @@ describe('Email Verification Controller', () => {
       expect(emailVerificationService.resendVerificationEmail).toHaveBeenCalledWith(mockReq);
       expect(response).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(responseError).not.toHaveBeenCalled();
-      expect(genResponseObj).toHaveBeenCalledWith(mockReq, '20009', mockResult);
+      expect(genResponseObj).toHaveBeenCalledWith(mockReq, 20000, mockResult);
     });
 
     test('should handle resend verification errors', async () => {
       mockReq.body = { email: 'test@example.com' };
 
       const mockError = new Error('User not found');
-      mockError.resCode = '40403';
+      mockError.resCode = 40402;
 
       emailVerificationService.resendVerificationEmail.mockRejectedValue(mockError);
 
@@ -83,7 +83,7 @@ describe('Email Verification Controller', () => {
       mockReq.body = { email: 'invalid-email' };
 
       const mockError = new Error('Validation failed');
-      mockError.resCode = '42201';
+      mockError.resCode = 40001;
 
       emailVerificationService.resendVerificationEmail.mockRejectedValue(mockError);
 
@@ -96,7 +96,7 @@ describe('Email Verification Controller', () => {
       mockReq.body = { email: 'test@example.com' };
 
       const mockError = new Error('Email service failed');
-      mockError.resCode = '50002';
+      mockError.resCode = 50001;
 
       emailVerificationService.resendVerificationEmail.mockRejectedValue(mockError);
 
@@ -122,14 +122,14 @@ describe('Email Verification Controller', () => {
       expect(emailVerificationService.verifyEmail).toHaveBeenCalledWith(mockReq);
       expect(response).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(responseError).not.toHaveBeenCalled();
-      expect(genResponseObj).toHaveBeenCalledWith(mockReq, '20010', mockResult);
+      expect(genResponseObj).toHaveBeenCalledWith(mockReq, 20000, mockResult);
     });
 
     test('should handle invalid verification token', async () => {
       mockReq.body = { token: 'invalid_token' };
 
       const mockError = new Error('Invalid or expired verification token');
-      mockError.resCode = '40011';
+      mockError.resCode = 40001;
 
       emailVerificationService.verifyEmail.mockRejectedValue(mockError);
 
@@ -144,7 +144,7 @@ describe('Email Verification Controller', () => {
       mockReq.body = {};
 
       const mockError = new Error('Token is required');
-      mockError.resCode = '42201';
+      mockError.resCode = 40001;
 
       emailVerificationService.verifyEmail.mockRejectedValue(mockError);
 
@@ -182,7 +182,7 @@ describe('Email Verification Controller', () => {
       expect(emailVerificationService.requestPasswordReset).toHaveBeenCalledWith(mockReq);
       expect(response).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(responseError).not.toHaveBeenCalled();
-      expect(genResponseObj).toHaveBeenCalledWith(mockReq, '20011', mockResult);
+      expect(genResponseObj).toHaveBeenCalledWith(mockReq, 20000, mockResult);
     });
 
     test('should handle requests for non-existent emails gracefully', async () => {
@@ -204,7 +204,7 @@ describe('Email Verification Controller', () => {
       mockReq.body = { email: 'invalid-email' };
 
       const mockError = new Error('Invalid email format');
-      mockError.resCode = '42201';
+      mockError.resCode = 40001;
 
       emailVerificationService.requestPasswordReset.mockRejectedValue(mockError);
 
@@ -217,7 +217,7 @@ describe('Email Verification Controller', () => {
       mockReq.body = {};
 
       const mockError = new Error('Email is required');
-      mockError.resCode = '42201';
+      mockError.resCode = 40001;
 
       emailVerificationService.requestPasswordReset.mockRejectedValue(mockError);
 
@@ -245,7 +245,7 @@ describe('Email Verification Controller', () => {
       expect(emailVerificationService.resetPassword).toHaveBeenCalledWith(mockReq);
       expect(response).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(responseError).not.toHaveBeenCalled();
-      expect(genResponseObj).toHaveBeenCalledWith(mockReq, '20012', mockResult);
+      expect(genResponseObj).toHaveBeenCalledWith(mockReq, 20014, mockResult);
     });
 
     test('should handle invalid reset token', async () => {
@@ -255,7 +255,7 @@ describe('Email Verification Controller', () => {
       };
 
       const mockError = new Error('Invalid or expired reset token');
-      mockError.resCode = '40012';
+      mockError.resCode = 40111;
 
       emailVerificationService.resetPassword.mockRejectedValue(mockError);
 
@@ -273,7 +273,7 @@ describe('Email Verification Controller', () => {
       };
 
       const mockError = new Error('Password is too weak');
-      mockError.resCode = '42201';
+      mockError.resCode = 40001;
 
       emailVerificationService.resetPassword.mockRejectedValue(mockError);
 
@@ -288,7 +288,7 @@ describe('Email Verification Controller', () => {
       };
 
       const mockError = new Error('Reset token is required');
-      mockError.resCode = '42201';
+      mockError.resCode = 40001;
 
       emailVerificationService.resetPassword.mockRejectedValue(mockError);
 
@@ -303,7 +303,7 @@ describe('Email Verification Controller', () => {
       };
 
       const mockError = new Error('New password is required');
-      mockError.resCode = '42201';
+      mockError.resCode = 40001;
 
       emailVerificationService.resetPassword.mockRejectedValue(mockError);
 
@@ -333,7 +333,7 @@ describe('Email Verification Controller', () => {
       expect(emailVerificationService.checkVerificationStatus).toHaveBeenCalledWith(mockReq);
       expect(response).toHaveBeenCalledWith(mockReq, mockRes, expect.any(Object));
       expect(responseError).not.toHaveBeenCalled();
-      expect(genResponseObj).toHaveBeenCalledWith(mockReq, '20013', mockResult);
+      expect(genResponseObj).toHaveBeenCalledWith(mockReq, 20000, mockResult);
     });
 
     test('should handle verification status retrieval errors', async () => {
@@ -341,7 +341,7 @@ describe('Email Verification Controller', () => {
       mockReq.user = mockUser;
 
       const mockError = new Error('User not found');
-      mockError.resCode = '40403';
+      mockError.resCode = 40402;
 
       emailVerificationService.checkVerificationStatus.mockRejectedValue(mockError);
 
@@ -356,7 +356,7 @@ describe('Email Verification Controller', () => {
       mockReq.user = null;
 
       const mockError = new Error('User not found');
-      mockError.resCode = '40403';
+      mockError.resCode = 40402;
 
       emailVerificationService.checkVerificationStatus.mockRejectedValue(mockError);
 
@@ -489,7 +489,7 @@ describe('Email Verification Controller', () => {
       });
 
       await emailVerificationController.resendVerificationEmail(mockReq, mockRes);
-      expect(genResponseObj).toHaveBeenCalledWith(mockReq, '20009', expect.any(Object));
+      expect(genResponseObj).toHaveBeenCalledWith(mockReq, 20000, expect.any(Object));
 
       // Test confirm verification
       mockReq.body = { token: 'valid_token' };
@@ -499,7 +499,7 @@ describe('Email Verification Controller', () => {
       });
 
       await emailVerificationController.verifyEmail(mockReq, mockRes);
-      expect(genResponseObj).toHaveBeenCalledWith(mockReq, '20010', expect.any(Object));
+      expect(genResponseObj).toHaveBeenCalledWith(mockReq, 20000, expect.any(Object));
 
       // Test request password reset
       mockReq.body = { email: 'test@example.com' };
@@ -508,7 +508,7 @@ describe('Email Verification Controller', () => {
       });
 
       await emailVerificationController.requestPasswordReset(mockReq, mockRes);
-      expect(genResponseObj).toHaveBeenCalledWith(mockReq, '20011', expect.any(Object));
+      expect(genResponseObj).toHaveBeenCalledWith(mockReq, 20000, expect.any(Object));
 
       // Test confirm password reset
       mockReq.body = {
@@ -520,7 +520,7 @@ describe('Email Verification Controller', () => {
       });
 
       await emailVerificationController.resetPassword(mockReq, mockRes);
-      expect(genResponseObj).toHaveBeenCalledWith(mockReq, '20012', expect.any(Object));
+      expect(genResponseObj).toHaveBeenCalledWith(mockReq, 20000, expect.any(Object));
 
       // Test get verification status
       const mockUser = { id: 1, username: 'testuser' };
@@ -531,7 +531,7 @@ describe('Email Verification Controller', () => {
       });
 
       await emailVerificationController.checkVerificationStatus(mockReq, mockRes);
-      expect(genResponseObj).toHaveBeenCalledWith(mockReq, '20013', expect.any(Object));
+      expect(genResponseObj).toHaveBeenCalledWith(mockReq, 20000, expect.any(Object));
     });
   });
 });

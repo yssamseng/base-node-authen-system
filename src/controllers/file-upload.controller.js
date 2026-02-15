@@ -134,7 +134,7 @@ export const downloadFile = async (req, res) => {
     }
 
     // Security: Prevent path traversal
-    const sanitizedPath = filePath.replace(/\.\.\.//g, '').replace(/\.\.\//g, '').replace(/\.\./g, '');
+    const sanitizedPath = filePath.replace(/\.\.\//g, '').replace(/\.\./g, '');
 
     appLogger.logInfo('File download request', { userId, path: sanitizedPath });
 

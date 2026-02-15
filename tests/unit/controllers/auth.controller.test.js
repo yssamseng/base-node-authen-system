@@ -242,7 +242,7 @@ describe('Auth Controller', () => {
 
       await authController.login(mockReq, mockRes);
 
-      expect(genResponseObj).toHaveBeenCalledWith(mockReq, '20002', mockResult);
+      expect(genResponseObj).toHaveBeenCalledWith(mockReq, 20011, mockResult);
     });
   });
 });

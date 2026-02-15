@@ -95,7 +95,7 @@ describe('User Profile Service', () => {
       findOne.mockResolvedValue(null);
 
       await expect(userProfileService.getProfile(mockReq)).rejects.toThrow('User not found');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40403', 'User not found');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40402, 'User not found');
     });
 
     test('should handle user without auth data', async () => {
@@ -143,7 +143,7 @@ describe('User Profile Service', () => {
       mockReq.user = null;
 
       await expect(userProfileService.getProfile(mockReq)).rejects.toThrow('User not found');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40403', 'User not found');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40402, 'User not found');
     });
   });
 
@@ -250,7 +250,7 @@ describe('User Profile Service', () => {
       findOne.mockResolvedValue(null);
 
       await expect(userProfileService.updateProfile(mockReq)).rejects.toThrow('User not found');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40403', 'User not found');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40402, 'User not found');
       expect(update).not.toHaveBeenCalled();
     });
 
@@ -286,7 +286,7 @@ describe('User Profile Service', () => {
       mockReq.body = { firstName: 'Updated' };
 
       await expect(userProfileService.updateProfile(mockReq)).rejects.toThrow('User not found');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40403', 'User not found');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, 40402, 'User not found');
       expect(update).not.toHaveBeenCalled();
     });
   });
