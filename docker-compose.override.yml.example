@@ -1,0 +1,20 @@
+# Copy this file to docker-compose.override.yml for local development overrides
+# This file is NOT committed to git (it's in .gitignore)
+
+version: '3.8'
+
+services:
+  # Override app service for development
+  app:
+    volumes:
+      # Mount source code for hot reload
+      - .:/app
+      - /app/node_modules  # Prevent overwriting node_modules
+    environment:
+      - NODE_ENV=development
+    command: npm run dev  # Use nodemon for hot reload
+
+  # PgAdmin - enable when needed
+  pgadmin:
+    profiles:
+      - admin  # Disabled by default, use: docker-compose --profile admin up

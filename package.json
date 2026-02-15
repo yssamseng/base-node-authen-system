@@ -10,7 +10,16 @@
     "test": "jest --coverage",
     "db:migrate": "sequelize-cli db:migrate",
     "db:migrate:undo": "sequelize-cli db:migrate:undo",
-    "db:seed": "sequelize-cli db:seed:all"
+    "db:seed": "sequelize-cli db:seed:all",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:build": "docker-compose build",
+    "docker:rebuild": "docker-compose build --no-cache",
+    "docker:clean": "docker-compose down -v",
+    "docker:shell": "docker-compose exec app sh",
+    "docker:db": "docker-compose exec postgres psql -U postgres -d test-auth",
+    "docker:test": "docker-compose exec app npm test"
   },
   "keywords": [
     "nodejs",
