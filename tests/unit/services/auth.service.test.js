@@ -122,7 +122,7 @@ describe('Auth Service', () => {
       findOne.mockResolvedValueOnce(existingUser);
 
       await expect(authService.register(mockReq, mockTransaction)).rejects.toThrow('User with this email already exists');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40001', 'User with this email already exists');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40013', 'User with this email already exists');
       expect(create).not.toHaveBeenCalled();
     });
 
@@ -236,7 +236,7 @@ describe('Auth Service', () => {
       User.findOne.mockResolvedValue(mockUser);
 
       await expect(authService.login(mockReq)).rejects.toThrow('Authentication data not found');
-      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40008', 'Authentication data not found');
+      expect(genErrorResponseObj).toHaveBeenCalledWith(mockReq, '40010', 'Authentication data not found');
     });
 
     test('should throw error if account is locked', async () => {

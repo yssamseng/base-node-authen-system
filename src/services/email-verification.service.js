@@ -55,7 +55,7 @@ const resendVerificationEmail = async (req) => {
       const remainingCooldown = Math.ceil(
         (emailVerifyConfig.getResendCooldownMs() - timeSinceLastSent) / (60 * 1000)
       );
-      throw genErrorResponseObj(req, RES_CODE.EMAIL_VERIFICATION_COOLDOWN, `Please wait ${remainingCooldown} minutes before requesting another verification email`);
+      throw genErrorResponseObj(req, RES_CODE.PLEASE_TRY_AGAIN, `Please wait ${remainingCooldown} minutes before requesting another verification email`);
     }
   }
 
@@ -92,7 +92,7 @@ const verifyEmail = async (req) => {
   const { token } = req.body;
 
   if (!token) {
-    throw genErrorResponseObj(req, RES_CODE.VERIFICATION_TOKEN_REQUIRED, 'Verification token is required');
+    throw genErrorResponseObj(req, RES_CODE.PARAMETER_IS_MISSING, 'Verification token is required');
   }
 
   // Find user by verification token (using db.util)
@@ -107,17 +107,17 @@ const verifyEmail = async (req) => {
   });
 
   if (!userAuth) {
-    throw genErrorResponseObj(req, RES_CODE.VERIFICATION_TOKEN_INVALID, 'Invalid or expired verification token');
+    throw genErrorResponseObj(req, RES_CODE.TOKEN_INVALID, 'Invalid or expired verification token');
   }
 
   // Check if token is expired
   if (userAuth.isEmailVerificationExpired()) {
-    throw genErrorResponseObj(req, RES_CODE.VERIFICATION_TOKEN_EXPIRED, 'Verification token has expired. Please request a new one');
+    throw genErrorResponseObj(req, RES_CODE.TOKEN_EXPIRED, 'Verification token has expired. Please request a new one');
   }
 
   // Check if user is already verified
   if (userAuth.isVerified) {
-    throw genErrorResponseObj(req, RES_CODE.EMAIL_ALREADY_VERIFIED_RETRY, 'Email is already verified');
+    throw genErrorResponseObj(req, RES_CODE.EMAIL_ALREADY_VERIFIED, 'Email is already verified');
   }
 
   // Mark email as verified
@@ -194,7 +194,7 @@ const resetPassword = async (req) => {
   const { token, newPassword } = req.body;
 
   if (!token || !newPassword) {
-    throw genErrorResponseObj(req, RES_CODE.PASSWORD_RESET_REQUIRED, 'Reset token and new password are required');
+    throw genErrorResponseObj(req, RES_CODE.PARAMETER_IS_MISSING, 'Reset token and new password are required');
   }
 
   // Find user by reset token (using db.util)
@@ -209,12 +209,12 @@ const resetPassword = async (req) => {
   });
 
   if (!userAuth) {
-    throw genErrorResponseObj(req, RES_CODE.PASSWORD_RESET_TOKEN_INVALID, 'Invalid or expired reset token');
+    throw genErrorResponseObj(req, RES_CODE.TOKEN_INVALID, 'Invalid or expired reset token');
   }
 
   // Check if token is expired
   if (userAuth.isPasswordResetExpired()) {
-    throw genErrorResponseObj(req, RES_CODE.PASSWORD_RESET_TOKEN_EXPIRED, 'Password reset token has expired. Please request a new one');
+    throw genErrorResponseObj(req, RES_CODE.TOKEN_EXPIRED, 'Password reset token has expired. Please request a new one');
   }
 
   // Update password and clear reset token

@@ -18,7 +18,7 @@ import {
 const resendVerificationEmail = async (req, res, next) => {
   try {
     const result = await serviceResendVerificationEmail(req);
-    response(req, res, genResponseObj(req, RES_CODE.EMAIL_VERIFICATION_RESENT, result));
+    response(req, res, genResponseObj(req, RES_CODE.SUCCESS, result));
   } catch (error) {
     responseError(req, res, error);
   }
@@ -34,7 +34,7 @@ const resendVerificationEmail = async (req, res, next) => {
 const verifyEmail = async (req, res, next) => {
   try {
     const result = await serviceVerifyEmail(req);
-    response(req, res, genResponseObj(req, RES_CODE.EMAIL_VERIFIED, result));
+    response(req, res, genResponseObj(req, RES_CODE.SUCCESS, result));
   } catch (error) {
     responseError(req, res, error);
   }
@@ -50,7 +50,7 @@ const verifyEmail = async (req, res, next) => {
 const requestPasswordReset = async (req, res, next) => {
   try {
     const result = await serviceRequestPasswordReset(req);
-    response(req, res, genResponseObj(req, RES_CODE.PASSWORD_RESET_REQUESTED, result));
+    response(req, res, genResponseObj(req, RES_CODE.SUCCESS, result));
   } catch (error) {
     responseError(req, res, error);
   }
@@ -82,7 +82,7 @@ const resetPassword = async (req, res, next) => {
 const checkVerificationStatus = async (req, res, next) => {
   try {
     const result = await serviceCheckVerificationStatus(req);
-    response(req, res, genResponseObj(req, RES_CODE.VERIFICATION_STATUS, result));
+    response(req, res, genResponseObj(req, RES_CODE.SUCCESS, result));
   } catch (error) {
     responseError(req, res, error);
   }

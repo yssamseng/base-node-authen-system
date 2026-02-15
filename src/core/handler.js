@@ -1,6 +1,7 @@
 // src/core/response.js
 import { appLogger } from '../utils/app-logger.util.js';
-import { resCodeMessagesMapping, RES_CODE } from '../config/constants.js';
+import { RES_CODE } from '../config/constants.js';
+import { RES_CODE_MESSAGE_MAPPING } from '../config/message.maping.js';
 import { nowIsoMs } from '../utils/date.util.js';
 
 /** ---------- Helpers ---------- **/
@@ -22,8 +23,8 @@ const getLanguage = (req) => {
   return ['th', 'en'].includes(lang) ? lang : 'th';
 };
 
-/** หา message object จาก resCodeMessagesMapping, ถ้าไม่มีใช้ INTERNAL_ERROR */
-const resolveMessageObj = (_resCode) => resCodeMessagesMapping?.[_resCode] ?? resCodeMessagesMapping?.[RES_CODE.INTERNAL_ERROR] ?? { th: 'เกิดข้อผิดพลาด', en: 'Unexpected error' };
+/** หา message object จาก RES_CODE_MESSAGE_MAPPING, ถ้าไม่มีใช้ INTERNAL_ERROR */
+const resolveMessageObj = (_resCode) => RES_CODE_MESSAGE_MAPPING?.[_resCode] ?? RES_CODE_MESSAGE_MAPPING?.[RES_CODE.INTERNAL_ERROR] ?? { th: 'เกิดข้อผิดพลาด', en: 'Unexpected error' };
 
 /** บันทึก responseObject ลง res สำหรับ trace/debug */
 const attachResponseObject = (res, body) => {
@@ -55,7 +56,7 @@ const response = (req, res, responseObj) => {
 /**
  * ส่ง response เมื่อเกิด error
  * - ถ้ามี e.resCode จะ map เป็น HTTP status
- * - ถ้าไม่มี ใช้ 500xx และคืน userMessage จากตาราง resCodeMessagesMapping
+ * - ถ้าไม่มี ใช้ 500xx และคืน userMessage จากตาราง RES_CODE_MESSAGE_MAPPING
  * @param {Request} req
  * @param {Response} res
  * @param {Error & {resCode?: number|string, error?: any}} e

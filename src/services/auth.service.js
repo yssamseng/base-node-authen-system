@@ -206,7 +206,7 @@ const login = async (req) => {
 
   // Check email verification if enabled and required
   if (emailVerifyConfig.isLoginVerificationRequired() && !userAuth.isVerified) {
-    throw genErrorResponseObj(req, RES_CODE.EMAIL_VERIFICATION_REQUIRED, 'Please verify your email address before logging in');
+    throw genErrorResponseObj(req, RES_CODE.AUTHENTICATION_REQUIRED, 'Please verify your email address before logging in');
   }
 
   // Verify password

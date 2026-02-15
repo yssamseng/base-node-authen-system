@@ -57,7 +57,147 @@ All responses use this format (see `src/core/handler.js`):
 { status: false, transactionId: "...", resCode: "40001", error: { developerMessage: "...", userMessage: "..." } }
 ```
 
-Response codes (`resCode`) are defined in `src/config/constants.js` - first 3 digits map to HTTP status. Multi-language messages in `src/config/message.properties.js` (Thai/English).
+Response codes (`resCode`) are numeric codes defined in `src/config/constants.js` - first 3 digits map to HTTP status. Multi-language messages mapped via `src/config/message.maping.js` to `src/config/message.properties.js` (Thai/English).
+
+### Response Code Mapping Architecture
+
+The API uses a three-tier response code system for consistent, localized error handling:
+
+**1. RES_CODE Constants (`src/config/constants.js`)**
+```javascript
+export const RES_CODE = {
+  // 200 - Success
+  SUCCESS: 20000,
+  REGISTRATION_SUCCESS: 20010,
+  LOGIN_SUCCESS: 20011,
+
+  // 400 - Bad Request
+  INVALID_REQUEST: 40000,
+  INVALID_PARAMETER: 40001,
+  PARAMETER_IS_MISSING: 40002,
+
+  // 401 - Unauthorized
+  AUTHENTICATION_REQUIRED: 40100,
+  TOKEN_INVALID: 40111,
+  TOKEN_EXPIRED: 40112,
+
+  // 403 - Forbidden
+  FORBIDDEN: 40300,
+  ACCESS_DENIED: 40321,
+
+  // 404 - Not Found
+  USER_NOT_FOUND: 40402,
+  FILE_NOT_FOUND: 40403,
+
+  // 409 - Conflict
+  EMAIL_ALREADY_EXISTS: 40900,
+  USERNAME_ALREADY_EXISTS: 40902,
+
+  // 500 - Server Error
+  INTERNAL_ERROR: 50000,
+  PLEASE_TRY_AGAIN: 50001,
+};
+```
+
+**Code Format**: `{HTTP_STATUS}{SEQUENTIAL_NUMBER}`
+- First 3 digits = HTTP status code (200, 400, 401, 403, 404, 409, 500)
+- Last 2 digits = sequential identifier for that status type
+
+**2. RES_CODE_MESSAGE_MAPPING (`src/config/message.maping.js`)**
+```javascript
+import { RES_CODE } from './constants.js';
+import { resMessage } from './message.properties.js';
+
+export const RES_CODE_MESSAGE_MAPPING = {
+  [RES_CODE.SUCCESS]: resMessage.common.success,
+  [RES_CODE.USER_NOT_FOUND]: resMessage.notFound.userNotFound,
+  [RES_CODE.EMAIL_ALREADY_EXISTS]: resMessage.auth.emailAlreadyExists,
+  // ... maps all RES_CODE to message objects
+};
+```
+
+**3. Response Messages (`src/config/message.properties.js`)**
+```javascript
+export const resMessage = {
+  common: {
+    success: { en: 'Successful with data.', th: 'ทำรายการสำเร็จ' },
+    error: { en: 'Sorry, system not available.', th: 'ระบบไม่สามารถให้บริการได้' },
+  },
+  auth: {
+    loginSuccess: { en: 'Login successful', th: 'เข้าสู่ระบบสำเร็จ' },
+    emailAlreadyExists: { en: 'Email already exists', th: 'อีเมลนี้มีผู้ใช้งานแล้ว' },
+  },
+  // ... organized by category matching HTTP status codes
+};
+```
+
+### Usage Pattern
+
+**In Services (throwing errors):**
+```javascript
+import { RES_CODE } from '../config/constants.js';
+import { genErrorResponseObj } from '../core/handler.js';
+
+// User not found
+throw genErrorResponseObj(req, RES_CODE.USER_NOT_FOUND, 'User not found');
+
+// Invalid parameter
+throw genErrorResponseObj(req, RES_CODE.INVALID_PARAMETER, 'Email is required');
+
+// Email already exists
+throw genErrorResponseObj(req, RES_CODE.EMAIL_ALREADY_EXISTS, 'User with this email already exists');
+```
+
+**In Controllers (success responses):**
+```javascript
+import { RES_CODE } from '../config/constants.js';
+import { genResponseObj, response } from '../core/handler.js';
+
+// Success response
+return response(req, res, genResponseObj(req, RES_CODE.SUCCESS, result));
+
+// Specific success
+return response(req, res, genResponseObj(req, RES_CODE.LOGIN_SUCCESS, result));
+```
+
+### Message Resolution Flow
+
+1. Service throws: `genErrorResponseObj(req, RES_CODE.USER_NOT_FOUND, '...')`
+2. Handler receives error with `resCode: 40402`
+3. `resolveMessageObj()` in `src/core/handler.js` looks up `RES_CODE_MESSAGE_MAPPING[40402]`
+4. Returns `resMessage.notFound.userNotFound` object
+5. `getLanguage(req)` extracts language from `x-language` header
+6. Returns appropriate `userMessage` in Thai or English
+
+### Adding New Response Codes
+
+When adding new error/success scenarios:
+
+1. **Add RES_CODE** to `src/config/constants.js` in appropriate HTTP section:
+   ```javascript
+   // 400 - Bad Request
+   YOUR_NEW_ERROR: 40005,  // Next sequential number
+   ```
+
+2. **Add message** to `src/config/message.properties.js`:
+   ```javascript
+   yourCategory: {
+     yourNewError: {
+       en: 'Your error message in English',
+       th: 'ข้อความผิดพลาดภาษาไทย',
+     },
+   }
+   ```
+
+3. **Add mapping** to `src/config/message.maping.js`:
+   ```javascript
+   [RES_CODE.YOUR_NEW_ERROR]: resMessage.yourCategory.yourNewError,
+   ```
+
+4. **Use in code**:
+   ```javascript
+   throw genErrorResponseObj(req, RES_CODE.YOUR_NEW_ERROR, 'Developer message');
+   ```
 
 ### Authentication Flow
 - JWT with **separate secrets** for access tokens (15min) and refresh tokens (7d) - security requirement
@@ -120,19 +260,47 @@ Controllers use this pattern for all responses (see `src/core/handler.js`):
 
 **Success Response:**
 ```javascript
-return response(req, res, genResponseObj(req, '20000', result));
+import { RES_CODE } from '../config/constants.js';
+import { genResponseObj, response } from '../core/handler.js';
+
+return response(req, res, genResponseObj(req, RES_CODE.SUCCESS, result));
 ```
 
-**Error Response:**
+**Error Response (from services):**
 ```javascript
+import { RES_CODE } from '../config/constants.js';
+import { genErrorResponseObj } from '../core/handler.js';
+
+// Throw error in service
+throw genErrorResponseObj(req, RES_CODE.USER_NOT_FOUND, 'User not found');
+
+// Controller handles with responseError
 return responseError(req, res, error);
 ```
 
-**Functions:**
+**Handler Functions (`src/core/handler.js`):**
 - `genResponseObj(req, resCode, data)` → Creates `{ status: true, transactionId, resCode, data }`
 - `response(req, res, responseObj)` → Logs, sets HTTP status from resCode (first 3 digits), sends JSON
-- `responseError(req, res, error)` → Handles errors, maps to localized messages
+- `responseError(req, res, error)` → Handles errors, auto-maps to localized messages via RES_CODE_MESSAGE_MAPPING
 - `genErrorResponseObj(req, resCode, developerMessage)` → Creates error object for throwing
+
+**Language Detection:**
+Messages are localized based on `x-language` header (`th` or `en`, defaults to `th`):
+```javascript
+// Request header
+headers: {
+  'x-language': 'en'  // or 'th'
+}
+
+// Response will use corresponding language
+{
+  "status": false,
+  "resCode": 40402,
+  "error": {
+    "userMessage": "User not found"  // English version
+  }
+}
+```
 
 ## Logging Architecture
 
@@ -226,11 +394,11 @@ All API endpoints use versioning: `/api/v1/...`
 - `/api/health` - Health check (no version)
 - `/api/v1/*` - All versioned endpoints
 
-**Adding New Versions:**
-1. Create new version directory: `src/routes/v2/`
-2. Copy and modify routes from `v1/`
-3. Create `src/routes/v2/index.js` to aggregate v2 routes
-4. Add to `src/routes/routes.js`: `router.use('/v2', v2Routes);`
+**Adding New Features:**
+New features should be added to the current version (v1) unless:
+- Breaking changes are required
+- Need for backward compatibility
+- Separate feature set requiring independent versioning
 
 ### Public Endpoints (v1)
 - `POST /api/v1/auth/register` - User registration (returns access + refresh tokens)
@@ -249,6 +417,54 @@ All API endpoints use versioning: `/api/v1/...`
 - `POST /api/v1/email-verification/verify` - Verify email with token
 - `POST /api/v1/email-verification/request-password-reset` - Request password reset
 - `POST /api/v1/email-verification/reset-password` - Reset password with token
+- `POST /api/v1/files/upload` - Upload file (multipart/form-data)
+- `GET /api/v1/files` - List user's files
+- `GET /api/v1/files/:fileId` - Get file metadata
+- `GET /api/v1/files/download` - Download file
+- `DELETE /api/v1/files/:fileId` - Delete file
+- `GET /api/v1/files/storage/info` - Get storage quota
+
+### Protected Endpoints (v1) - File Upload
+
+All file upload endpoints require authentication and use the file upload system powered by Multer.
+
+**File Upload Response Codes:**
+- `20011` - FILE_UPLOAD_SUCCESS: File uploaded successfully
+- `20012` - FILE_DOWNLOAD_SUCCESS: File download ready
+- `20013` - FILE_DELETE_SUCCESS: File deleted successfully
+- `50101` - INVALID_FILE_TYPE: Invalid file type
+- `50102` - FILE_TOO_LARGE: File exceeds size limit (10MB)
+- `50103` - STORAGE_ERROR: Storage write failure
+- `40004` - FILE_NOT_FOUND: File not found
+- `40005` - ACCESS_DENIED: Access denied (owner mismatch)
+- `40006` - QUOTA_EXCEEDED: User quota exceeded
+- `50401` - INVALID_FILENAME: Invalid filename characters
+- `40001` - NO_FILE_PROVIDED: No file in request
+
+**Endpoints:**
+- `POST /api/v1/files/upload` - Upload file (multipart/form-data, field name: "file")
+  - Max file size: 10MB
+  - Allowed types: Images (jpg, png, gif), PDF, Office docs, CSV
+  - Automatic filename sanitization (path traversal prevention)
+- `GET /api/v1/files` - List user's files (with pagination)
+- `GET /api/v1/files/:fileId` - Get file metadata
+- `GET /api/v1/files/download?path=...` - Download file by path
+- `DELETE /api/v1/files/:fileId` - Delete file (owner only)
+- `GET /api/v1/files/storage/info` - Get user storage quota information
+
+**File Upload Configuration:**
+- Storage path: `uploads/` with user subdirectories
+- Filename format: `{basename}-{timestamp}{random}{extension}`
+- User quota: 10GB per user
+- Max files per request: 5
+
+**Security Features:**
+- File type validation by MIME type
+- File size limits enforced at middleware level
+- Path traversal protection (`../` removed)
+- Filename sanitization (special chars removed)
+- Ownership verification (users can only access their own files)
+- User-specific storage directories
 
 ## Security Features
 

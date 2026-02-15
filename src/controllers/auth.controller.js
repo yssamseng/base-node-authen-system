@@ -77,7 +77,7 @@ const logoutAll = async (req, res) => {
 const refreshToken = async (req, res) => {
   try {
     const result = await authService.refreshToken(req);
-    return response(req, res, genResponseObj(req, RES_CODE.TOKEN_REFRESH_SUCCESS, result));
+    return response(req, res, genResponseObj(req, RES_CODE.SUCCESS, result));
   } catch (error) {
     return responseError(req, res, error);
   }

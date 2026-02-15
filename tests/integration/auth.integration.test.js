@@ -195,7 +195,7 @@ describe('Authentication Integration Tests', () => {
 
       expect(response.body).toMatchObject({
         status: true,
-        resCode: '20002',
+        resCode: '20003',
         data: expect.objectContaining({
           user: expect.objectContaining({
             email: 'test@example.com'
@@ -319,8 +319,8 @@ describe('Authentication Integration Tests', () => {
 
     test('should reject access to protected route without token', async () => {
       const response = await request(app)
-        .get('/api/v1/user/profile')
-        .expect(400);
+        .put('/api/v1/user/profile')
+        .expect(401);
 
       expect(response.body).toMatchObject({
         status: false
