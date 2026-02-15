@@ -84,7 +84,7 @@ const upload = multer({
     if (req.files && Object.keys(req.files).length > 10) {
       return res.status(400).json({
         status: false,
-        resCode: '40005',
+        resCode: RES_CODE.TOO_MANY_FILES,
         error: {
           developerMessage: 'Too many files uploaded',
           userMessage: 'Maximum 10 files allowed per upload'

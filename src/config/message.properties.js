@@ -268,6 +268,10 @@ export const resMessage = {
       en: "No file provided",
       th: "ไม่ได้ระบุไฟล์",
     },
+    tooManyFiles: {
+      en: "Maximum 10 files allowed per upload",
+      th: "อัปโหลดได้สูงสุด 10 ไฟล์ต่อครั้ง",
+    },
 
     accessDenied: {
       en: "No permission to access this file",

@@ -93,5 +93,6 @@ export const RES_CODE_MESSAGE_MAPPING = {
   [RES_CODE.QUOTA_EXCEEDED]: resMessage.fileUpload.quotaExceeded,
   [RES_CODE.INVALID_FILENAME]: resMessage.fileUpload.invalidFilename,
   [RES_CODE.NO_FILE_PROVIDED]: resMessage.fileUpload.noFileProvided,
+  [RES_CODE.TOO_MANY_FILES]: resMessage.fileUpload.tooManyFiles,
   [RES_CODE.ACCESS_DENIED]: resMessage.fileUpload.accessDenied,
 };

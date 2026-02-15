@@ -6,7 +6,6 @@
 
 import { findOne } from '../utils/db.util.js';
 import { genResponseObj, genErrorResponseObj } from '../core/handler.js';
-import { FILE_UPLOAD_ERROR } from '../config/file-upload.config.js';
 import {
   deleteFile,
   fileExists,
@@ -21,7 +20,7 @@ import {
   cleanupOldFiles
 } from '../utils/file-upload.util.js';
 import { appLogger } from '../utils/app-logger.util.js';
-import { APP_VERSION } from '../config/constants.js';
+import { APP_VERSION, RES_CODE } from '../config/constants.js';
 
 /**
  * UserFile model definition (for future use)
@@ -68,7 +67,7 @@ export const saveFileRecord = async (fileData, sequelize) => {
     return fileRecord;
   } catch (error) {
     appLogger.logError('Failed to save file record', error);
-    throw genErrorResponseObj('50105'); // Storage error
+    throw genErrorResponseObj(RES_CODE.INTERNAL_ERROR);
   }
 };
 
@@ -92,13 +91,13 @@ export const getFileById = async (fileId, userId) => {
 
     // Authorization check
     if (userId && fileRecord.userId !== userId) {
-      throw genErrorResponseObj('40403'); // Not found
+      throw genErrorResponseObj(RES_CODE.FILE_NOT_FOUND);
     }
 
     return fileRecord;
   } catch (error) {
     appLogger.logError('Failed to get file', error);
-    throw genErrorResponseObj('50001'); // Server error
+    throw genErrorResponseObj(RES_CODE.PLEASE_TRY_AGAIN);
   }
 };
 
@@ -118,7 +117,7 @@ export const listUserFiles = async (userId, options = {}) => {
     return files;
   } catch (error) {
     appLogger.logError('Failed to list files', error);
-    throw genErrorResponseObj('50001');
+    throw genErrorResponseObj(RES_CODE.PLEASE_TRY_AGAIN);
   }
 };
 
@@ -138,7 +137,7 @@ export const deleteFileById = async (fileId, userId, reqUserId) => {
 
     // Authorization check
     if (userId && reqUserId && userId !== reqUserId) {
-      throw genErrorResponseObj('40301'); // Forbidden
+      throw genErrorResponseObj(RES_CODE.ACCESS_DENIED);
     }
 
     // Mock deletion
@@ -146,7 +145,7 @@ export const deleteFileById = async (fileId, userId, reqUserId) => {
     return true;
   } catch (error) {
     appLogger.logError('Failed to delete file', error);
-    throw genErrorResponseObj('50001');
+    throw genErrorResponseObj(RES_CODE.PLEASE_TRY_AGAIN);
   }
 };
 
@@ -182,7 +181,7 @@ export const getUserStorageInfo = async (userId) => {
     };
   } catch (error) {
     appLogger.logError('Failed to get storage info', error);
-    throw genErrorResponseObj('50001');
+    throw genErrorResponseObj(RES_CODE.PLEASE_TRY_AGAIN);
   }
 };
 
