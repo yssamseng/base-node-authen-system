@@ -4,23 +4,9 @@
  * @module services/file-upload
  */
 
-import { findOne } from '../utils/db.util.js';
-import { genResponseObj, genErrorResponseObj } from '../core/handler.js';
-import {
-  deleteFile,
-  fileExists,
-  getFileStats,
-  createDirectory,
-  readFile,
-  listFiles,
-  formatFileSize,
-  detectFileType,
-  getExtensionFromMime,
-  generateUniqueFilename,
-  cleanupOldFiles
-} from '../utils/file-upload.util.js';
+import { genErrorResponseObj } from '../core/handler.js';
 import { appLogger } from '../utils/app-logger.util.js';
-import { APP_VERSION, RES_CODE } from '../config/constants.js';
+import { RES_CODE } from '../config/constants.js';
 
 /**
  * UserFile model definition (for future use)
@@ -41,10 +27,10 @@ const UserFile = {
 /**
  * Save file metadata to database
  * @param {Object} fileData - File metadata
- * @param {Object} sequelize - Sequelize instance (optional, for transactions)
+ * @param {Object} _sequelize - Sequelize instance (optional, for transactions) - unused in mock
  * @returns {Promise<Object>} Created file record
  */
-export const saveFileRecord = async (fileData, sequelize) => {
+export const saveFileRecord = async (fileData, _sequelize) => {
   try {
     // TODO: Replace with actual UserFile model when ready
     // Using mock implementation for now
