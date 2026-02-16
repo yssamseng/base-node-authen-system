@@ -1,0 +1,136 @@
+# OpenAPI/Swagger Components
+# Shared schemas and definitions
+
+schemas:
+  # Standard error response
+  Error:
+    type: object
+    properties:
+      status:
+        type: boolean
+        example: false
+      transactionId:
+        type: string
+        format: uuid
+      resCode:
+        type: integer
+        description: Response code (first 3 digits = HTTP status)
+        example: 40001
+      error:
+        type: object
+        properties:
+          developerMessage:
+            type: string
+          userMessage:
+            type: string
+
+  # Standard success response
+  Success:
+    type: object
+    properties:
+      status:
+        type: boolean
+        example: true
+      transactionId:
+        type: string
+        format: uuid
+      resCode:
+        type: integer
+        example: 20000
+      data:
+        type: object
+
+  # User object
+  User:
+    type: object
+    properties:
+      id:
+        type: integer
+      username:
+        type: string
+      email:
+        type: string
+        format: email
+      firstName:
+        type: string
+      lastName:
+        type: string
+      isActive:
+        type: boolean
+      createdAt:
+        type: string
+        format: date-time
+
+  # Registration request
+  RegisterRequest:
+    type: object
+    required:
+      - username
+      - email
+      - password
+      - firstName
+      - lastName
+    properties:
+      username:
+        type: string
+        minLength: 3
+        maxLength: 50
+        description: Unique username
+        example: johndoe
+      email:
+        type: string
+        format: email
+        description: Valid email address
+        example: john@example.com
+      password:
+        type: string
+        minLength: 8
+        description: Password with uppercase, lowercase, number, and special character
+        example: Password@123
+      firstName:
+        type: string
+        maxLength: 50
+        example: John
+      lastName:
+        type: string
+        maxLength: 50
+        example: Doe
+
+  # Login request
+  LoginRequest:
+    type: object
+    required:
+      - email
+      - password
+    properties:
+      email:
+        type: string
+        format: email
+        example: john@example.com
+      password:
+        type: string
+        example: Password@123
+
+  # Authentication response
+  AuthResponse:
+    type: object
+    properties:
+      user:
+        $ref: '#/schemas/User'
+      accessToken:
+        type: string
+        description: JWT access token (15min expiration)
+      refreshToken:
+        type: string
+        description: JWT refresh token (7 days expiration)
+
+  # Update profile request
+  UpdateProfileRequest:
+    type: object
+    properties:
+      firstName:
+        type: string
+        maxLength: 50
+      lastName:
+        type: string
+        maxLength: 50
