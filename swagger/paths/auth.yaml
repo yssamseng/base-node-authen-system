@@ -1,0 +1,340 @@
+# Authentication paths
+# These will be mounted under /api/v1/auth/
+
+/register:
+  post:
+    summary: Register a new user
+    description: Create a new user account with email and password verification
+    tags:
+      - Authentication
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/RegisterRequest'
+          example:
+            username: johndoe
+            email: john@example.com
+            password: Password@123
+            firstName: John
+            lastName: Doe
+    responses:
+      '200':
+        description: User registered successfully
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas.yaml#/Success'
+                - type: object
+                  properties:
+                    resCode:
+                      type: integer
+                      example: 20010
+                    data:
+                      $ref: '../components/schemas.yaml#/AuthResponse'
+            example:
+              status: true
+              transactionId: 550e8400-e29b-41d4-a716-446655440000
+              resCode: 20010
+              data:
+                user:
+                  id: 1
+                  username: johndoe
+                  email: john@example.com
+                  firstName: John
+                  lastName: Doe
+                  isActive: true
+                accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                refreshToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+      '400':
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            example:
+              status: false
+              transactionId: 550e8400-e29b-41d4-a716-446655440000
+              resCode: 40001
+              error:
+                developerMessage: Validation failed
+                userMessage: Password must contain at least one uppercase letter
+      '409':
+        description: Email or username already exists
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            example:
+              status: false
+              transactionId: 550e8400-e29b-41d4-a716-446655440000
+              resCode: 40900
+              error:
+                developerMessage: Email already exists
+                userMessage: อีเมลนี้มีผู้ใช้งานแล้ว
+    x-rate-limit: 10 requests per 15 minutes
+
+/login:
+  post:
+    summary: User login
+    description: Authenticate user with email and password, returns JWT tokens
+    tags:
+      - Authentication
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/LoginRequest'
+          example:
+            email: john@example.com
+            password: Password@123
+    responses:
+      '200':
+        description: Login successful
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas.yaml#/Success'
+                - type: object
+                  properties:
+                    resCode:
+                      type: integer
+                      example: 20011
+                    data:
+                      $ref: '../components/schemas.yaml#/AuthResponse'
+            example:
+              status: true
+              transactionId: 550e8400-e29b-41d4-a716-446655440000
+              resCode: 20011
+              data:
+                user:
+                  id: 1
+                  username: johndoe
+                  email: john@example.com
+                  firstName: John
+                  lastName: Doe
+                  isActive: true
+                accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTYxNjIzOTAyMiwiZXhwIjoxNjE2MjM5OTIyfQ.signature
+                refreshToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidHlwZSI6InJlZnJlc2giLCJpYXQiOjE2MTYyMzkwMjIsImV4cCI6MTYxNjg0MzgyMn0.signature
+      '401':
+        description: Invalid credentials or account locked
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            example:
+              status: false
+              transactionId: 550e8400-e29b-41d4-a716-446655440000
+              resCode: 40120
+              error:
+                developerMessage: Invalid credentials
+                userMessage: อีเมลหรือรหัสผ่านไม่ถูกต้อง
+    x-rate-limit: 10 requests per 15 minutes
+
+/refresh-token:
+  post:
+    summary: Refresh access token
+    description: Get a new access token using a valid refresh token
+    tags:
+      - Authentication
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - refreshToken
+            properties:
+              refreshToken:
+                type: string
+                description: JWT refresh token
+          example:
+            refreshToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+    responses:
+      '200':
+        description: Token refreshed successfully
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas.yaml#/Success'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        accessToken:
+                          type: string
+                        refreshToken:
+                          type: string
+            example:
+              status: true
+              transactionId: 550e8400-e29b-41d4-a716-446655440000
+              resCode: 20000
+              data:
+                accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...new_access_token
+                refreshToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...new_refresh_token
+      '401':
+        description: Invalid or expired refresh token
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            example:
+              status: false
+              transactionId: 550e8400-e29b-41d4-a716-446655440000
+              resCode: 40112
+              error:
+                developerMessage: Token expired
+                userMessage: เซสชันหมดอายุแล้ว
+    x-rate-limit: 10 requests per 15 minutes
+
+/logout:
+  post:
+    summary: Logout current session
+    description: Invalidate the current access/refresh token pair
+    tags:
+      - Authentication
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: Logout successful
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas.yaml#/Success'
+                - type: object
+                  properties:
+                    resCode:
+                      type: integer
+                      example: 20012
+            example:
+              status: true
+              transactionId: 550e8400-e29b-41d4-a716-446655440000
+              resCode: 20012
+              data:
+                message: Logged out successfully
+      '401':
+        description: Authentication required
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            example:
+              status: false
+              transactionId: 550e8400-e29b-41d4-a716-446655440000
+              resCode: 40100
+              error:
+                developerMessage: Authentication token missing
+                userMessage: ต้องระบุ token สำหรับยืนยันตัวตน
+
+/logout-all:
+  post:
+    summary: Logout all sessions
+    description: Invalidate all tokens for the current user
+    tags:
+      - Authentication
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: All sessions terminated
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Success'
+            example:
+              status: true
+              transactionId: 550e8400-e29b-41d4-a716-446655440000
+              resCode: 20000
+              data:
+                message: All sessions terminated
+      '401':
+        description: Authentication required
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            example:
+              status: false
+              transactionId: 550e8400-e29b-41d4-a716-446655440000
+              resCode: 40100
+              error:
+                developerMessage: Authentication token missing
+                userMessage: ต้องระบุ token สำหรับยืนยันตัวตน
+
+/change-password:
+  post:
+    summary: Change password
+    description: Change the current user's password
+    tags:
+      - Authentication
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - currentPassword
+              - newPassword
+            properties:
+              currentPassword:
+                type: string
+                minLength: 8
+                description: Current password
+              newPassword:
+                type: string
+                minLength: 8
+                description: New password (must contain uppercase, lowercase, number, special char)
+          example:
+            currentPassword: OldPassword@123
+            newPassword: NewPassword@456
+    responses:
+      '200':
+        description: Password changed successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Success'
+            example:
+              status: true
+              transactionId: 550e8400-e29b-41d4-a716-446655440000
+              resCode: 20000
+              data:
+                message: Password changed successfully
+      '400':
+        description: Invalid current password or validation error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            example:
+              status: false
+              transactionId: 550e8400-e29b-41d4-a716-446655440000
+              resCode: 40120
+              error:
+                developerMessage: Current password is incorrect
+                userMessage: รหัสผ่านปัจจุบันไม่ถูกต้อง
+      '401':
+        description: Authentication required
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Error'
+            example:
+              status: false
+              transactionId: 550e8400-e29b-41d4-a716-446655440000
+              resCode: 40100
+              error:
+                developerMessage: Authentication token missing
+                userMessage: ต้องระบุ token สำหรับยืนยันตัวตน

@@ -554,22 +554,121 @@ import app from '../../src/app.js'; // import AFTER mocks
 
 ## Configuration
 
-Environment variables in `.env` - critical security requirements:
-- `JWT_SECRET` and `JWT_REFRESH_SECRET` must be **different** and ≥32 characters (enforced at startup)
-- Sequelize uses `DB_DIALECT` (postgres/mysql) for database selection
-- Email verification has configurable requirements (login, profile, sensitive operations)
+### Environment File Structure
 
-Config loaded via `src/config/app-config.js` with validation defaults.
+Environment files are located in `src/config/env/`:
 
-See `.env.example` for all available configuration options including:
-- Service configuration (name, version)
-- Database connection settings
-- Database retry configuration (max retries, delays, backoff multiplier)
-- JWT token expiration times
-- CORS origins (comma-separated for multiple)
-- Email provider settings (SMTP or Gmail)
-- Email verification behavior
-- Better Stack logtail integration (optional)
+```
+src/config/env/
+├── .env.example     # Template with all available options (in git)
+├── .env             # Production environment (NOT in git)
+└── .env.dev         # Development environment (NOT in git)
+```
+
+### Environment Loading Mechanism
+
+The app uses **dotenv-safe** with validation via `src/config/app-config.js`:
+
+**Loading Logic:**
+```javascript
+// When NODE_ENV is not set (development mode)
+dotenvSafe.config({
+  path: path.join(__dirname, "./env/.env.dev"),
+  sample: path.join(__dirname, "./env/.env"),  // Validates against .env.example
+});
+
+// When NODE_ENV=production
+dotenvSafe.config({
+  path: path.join(__dirname, "./env/.env"),
+  sample: path.join(__dirname, "./env/.env"),  // Self-validation
+});
+```
+
+**Key Behaviors:**
+- dotenv-safe throws error if any variable in `.env.example` is missing from your `.env`
+- Config is cached when imported - changes require **server restart**
+- JWT validation happens at **module import time**, not runtime
+
+### Critical Security Requirements
+
+**JWT Secrets (validated at startup):**
+- `JWT_SECRET` ≥ 32 characters for access tokens
+- `JWT_REFRESH_SECRET` ≥ 32 characters, **MUST BE DIFFERENT** from JWT_SECRET
+- Generate with: `openssl rand -base64 32`
+- Invalid/missing secrets → **crashes on startup** (intentional fail-fast)
+
+**Database:**
+- `DB_DIALECT` must be set (`postgres` or `mysql`)
+- Connection retry configured via `DB_RETRY_*` variables
+
+### Available Configuration Options
+
+See `src/config/env/.env.example` for all options:
+
+**Service Configuration:**
+- `SERVICE_NAME` - Application name (default: node-auth-api)
+- `SERVICE_VERSION` - Application version (default: 1.0.0)
+- `PORT` - Server port (default: 3000)
+- `NODE_ENV` - Environment (development/production)
+
+**Database Configuration:**
+- `DB_DIALECT` - Database type (postgres/mysql) - **REQUIRED**
+- `DB_HOST` - Database host (default: localhost)
+- `DB_PORT` - Database port (default: 5432)
+- `DB_NAME` - Database name (default: test-auth)
+- `DB_USER` - Database user (default: postgres)
+- `DB_PASSWORD` - Database password
+
+**Database Connection Retry:**
+- `DB_RETRY_MAX` - Maximum retry attempts (default: 10)
+- `DB_RETRY_DELAY` - Initial delay in ms (default: 2000)
+- `DB_RETRY_MAX_DELAY` - Maximum delay in ms (default: 30000)
+- `DB_RETRY_SYNC` - Retry sync after connection (default: true)
+- `DB_HEALTH_CHECK_INTERVAL` - Runtime health check in ms (default: 60000)
+
+**JWT Configuration:**
+- `JWT_SECRET` - Access token secret (≥32 chars) - **REQUIRED**
+- `JWT_EXPIRE` - Access token expiration (default: 24h)
+- `JWT_ACCESS_EXPIRE` - Token expiration (default: 15m)
+- `JWT_REFRESH_SECRET` - Refresh token secret (≥32 chars, different from JWT_SECRET) - **REQUIRED**
+- `JWT_REFRESH_EXPIRE` - Refresh token expiration (default: 7d)
+
+**CORS Configuration:**
+- `CORS_ORIGIN` - Single origin or comma-separated multiple origins
+  - Single: `http://localhost:3000`
+  - Multiple: `http://localhost:3000,https://example.com`
+
+**Email Configuration:**
+- `EMAIL_PROVIDER` - Provider type (smtp or gmail)
+- `EMAIL_FROM` - Sender email address
+- `EMAIL_FROM_NAME` - Sender name
+- `FRONTEND_URL` - Frontend URL for email links
+
+**Email Verification:**
+- `EMAIL_VERIFICATION_ENABLED` - Enable feature (true/false)
+- `EMAIL_VERIFICATION_EXPIRY_HOURS` - Token expiry (default: 24)
+- `ALLOW_UNVERIFIED_LOGIN` - Allow login without verification (default: true)
+- `REQUIRE_EMAIL_VERIFICATION_FOR_LOGIN` - Require verification for login
+- `REQUIRE_EMAIL_VERIFICATION_FOR_PROFILE` - Require verification for profile updates
+- `REQUIRE_EMAIL_VERIFICATION_FOR_SENSITIVE` - Require verification for sensitive ops
+
+**Logging:**
+- `LOG_LEVEL` - Logging level (debug, info, warn, error)
+- `LOGTAIL_SOURCE_TOKEN` - Better Stack token (optional)
+- `LOGTAIL_ENDPOINT` - Better Stack endpoint (optional)
+
+### Configuration Access Pattern
+
+Access configuration via `APP_CONFIG` constant:
+
+```javascript
+import { APP_CONFIG } from '../config/app-config.js';
+
+// Access nested config
+const port = APP_CONFIG.server.port;
+const jwtSecret = APP_CONFIG.jwt.secret;
+const dbConfig = APP_CONFIG.database;
+```
 
 ## Route Registration
 
@@ -625,10 +724,5 @@ src/routes/
 ### Configuration
 - **JWT Validation**: Happens at module import time, not runtime. Invalid secrets will crash on startup (see `src/utils/jwt.util.js:8-29`)
 - **Config Caching**: Config is cached when imported - changes to `.env` require server restart
-- **Database Retry**: Automatic connection retry with exponential backoff (configured via `APP_CONFIG.database.retry` in `src/config/app-config.js`)
-  - `maxRetries`: Maximum connection attempts (default: 10)
-  - `initialDelay`: Initial retry delay in ms (default: 2000)
-  - `maxDelay`: Maximum retry delay in ms (default: 30000)
-  - `backoffMultiplier`: Exponential backoff multiplier (default: 2)
-  - `retrySync`: Retry database sync if it fails after connection (default: true)
-  - Runtime health checks every 30 seconds for automatic reconnection
+- **Environment Files**: Located in `src/config/env/` - uses dotenv-safe with validation (see Configuration section above)
+- **Database Retry**: Automatic connection retry with exponential backoff and runtime health checks (see `src/config/database.js:46-144`)
