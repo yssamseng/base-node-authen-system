@@ -385,6 +385,32 @@ Uses AsyncLocalStorage to maintain request context across async operations:
 - `correlation_id`: From `x-transaction-id` or `x-correlation-id` header, or generated UUID
 - `user_id`: Attached from authenticated user in `req.user`
 
+## API Documentation (Swagger)
+
+The project includes Swagger/OpenAPI 3.0 documentation with YAML-based spec files.
+
+**Access Swagger UI:**
+- Development: `http://localhost:3000/api-docs`
+- Production: `https://your-domain.com/api-docs`
+
+**Documentation Structure:**
+```
+swagger/
+├── swagger.yaml              # Main OpenAPI specification (info, servers, tags)
+├── paths/
+│   ├── auth.yaml            # Auth endpoints (register, login, refresh, logout)
+│   └── user.yaml            # User profile endpoints
+└── components/
+    └── schemas.yaml         # Reusable schema definitions
+```
+
+**Configuration:** `src/config/swagger.config.js` loads and merges YAML files, resolving `$ref` paths to proper JSON pointers.
+
+**Adding New Endpoints to Swagger:**
+1. Add path definition to appropriate `swagger/paths/*.yaml` file
+2. Add schemas to `swagger/components/schemas.yaml` if needed
+3. YAML files are auto-merged on server restart
+
 ## API Endpoints
 
 ### API Versioning
@@ -680,7 +706,8 @@ src/routes/
     ├── index.js          # v1 aggregator (mounts /v1)
     ├── auth.route.js
     ├── user.route.js
-    └── email-verification.route.js
+    ├── email-verification.route.js
+    └── file-upload.route.js
 ```
 
 **Adding Routes to v1:**
