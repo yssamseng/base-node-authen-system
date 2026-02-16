@@ -399,7 +399,8 @@ swagger/
 ├── swagger.yaml              # Main OpenAPI specification (info, servers, tags)
 ├── paths/
 │   ├── auth.yaml            # Auth endpoints (register, login, refresh, logout)
-│   └── user.yaml            # User profile endpoints
+│   ├── user.yaml            # User profile endpoints
+│   └── file-upload.yaml     # File upload endpoints
 └── components/
     └── schemas.yaml         # Reusable schema definitions
 ```
@@ -732,7 +733,7 @@ src/routes/
 - **Shared Primary Key**: UserAuth uses `userId` as PK (same as User.id) - this is intentional, not a mistake (see `src/models/user-auth.model.js:119-129`)
 - **Model Hooks**: Password hashing is handled in `beforeCreate`/`beforeUpdate` hooks - never hash manually in services (see `src/models/user-auth.model.js:179-192`)
 - **Transaction Flow**: Transactions pass Controller → Service → db.util → Sequelize. All db.util operations support transactions
-- **Connection Retry**: Database connection has automatic retry with exponential backoff on startup and health check every 30s for runtime reconnection (see `src/config/database.js:46-144`)
+- **Connection Retry**: Database connection has automatic retry with exponential backoff on startup and health check every 60s (configurable) for runtime reconnection (see `src/config/database.js:46-144`)
 
 ### Authentication
 - **JWT Secret Separation**: Access and refresh tokens MUST use different secrets (validated at import time in `src/utils/jwt.util.js:24-28`)
@@ -752,4 +753,4 @@ src/routes/
 - **JWT Validation**: Happens at module import time, not runtime. Invalid secrets will crash on startup (see `src/utils/jwt.util.js:8-29`)
 - **Config Caching**: Config is cached when imported - changes to `.env` require server restart
 - **Environment Files**: Located in `src/config/env/` - uses dotenv-safe with validation (see Configuration section above)
-- **Database Retry**: Automatic connection retry with exponential backoff and runtime health checks (see `src/config/database.js:46-144`)
+- **Database Retry**: Automatic connection retry with exponential backoff and runtime health checks (default: 60s interval, configurable via `DB_HEALTH_CHECK_INTERVAL`) (see `src/config/database.js:46-144`)
